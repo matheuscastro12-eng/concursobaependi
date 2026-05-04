@@ -1,5 +1,5 @@
 import React from "react";
-import logoIcon from "@/assets/logo-icon.png";
+import logoIcon from "@/assets/logo-concursos.svg";
 
 interface Props {
   children: React.ReactNode;
@@ -32,17 +32,17 @@ export default class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center px-4">
           <div className="text-center max-w-md">
-            <img src={logoIcon} alt="PreceptorMED" className="h-14 w-14 mx-auto mb-5 opacity-50" />
+            <img src={logoIcon} alt="ConcursosAI" className="h-14 w-14 mx-auto mb-5 opacity-50" />
             <h1 className="text-xl font-bold text-slate-800 mb-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
               Algo deu errado
             </h1>
             <p className="text-sm text-slate-500 mb-6">
-              Ocorreu um erro inesperado. Tente recarregar a pagina.
+              Ocorreu um erro inesperado. Tente recarregar a página.
             </p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => window.location.reload()}
-                className="px-6 py-2.5 bg-[#006D5B] text-white text-sm font-bold rounded-lg hover:bg-[#005344] transition-colors"
+                className="px-6 py-2.5 bg-[#2563EB] text-white text-sm font-bold rounded-lg hover:bg-[#1D4ED8] transition-colors"
               >
                 Recarregar
               </button>
@@ -68,7 +68,7 @@ ${this.state.error.stack ?? "(sem stack)"}${this.state.componentStack ? "\n\n—
                       `${this.state.error?.message}\n\n${this.state.error?.stack ?? ""}\n\n${this.state.componentStack ?? ""}`;
                     void navigator.clipboard?.writeText(txt);
                   }}
-                  className="mt-2 text-[11px] text-[#005344] hover:underline font-semibold"
+                  className="mt-2 text-[11px] text-[#1D4ED8] hover:underline font-semibold"
                 >
                   Copiar tudo
                 </button>

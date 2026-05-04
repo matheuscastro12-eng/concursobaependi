@@ -1,18 +1,22 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { convertVisitorToSignup } from '@/hooks/useVisitorTracking';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, phone?: string, signupIntent?: 'paid_signup' | 'organic') => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (params: { email: string; password: string; name: string }) => Promise<{ error: Error | null; session: Session | null; user: User | null }>;
+  signIn: (params: { email: string; password: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const isSupabaseConfigured = () =>
+  Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -28,72 +32,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
       setLoading(false);
     });
 
-    // Then check for existing session — clean up if CRM service account leaked
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user?.email === 'crm-service@thepreceptor.com.br') {
-        await supabase.auth.signOut();
-        setSession(null);
-        setUser(null);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      })
+      .finally(() => setLoading(false));
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, name: string, phone?: string, signupIntent?: 'paid_signup' | 'organic') => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: {
-          full_name: name,
-          phone: phone || '',
-          // Quando 'paid_signup', o trigger pula o trial gratuito
-          // (usuario veio do botao de assinatura — webhook EasyFlow cria sub paga)
-          signup_intent: signupIntent ?? 'organic',
-        },
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      session,
+      loading,
+      signUp: async ({ email, password, name }) => {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth`,
+            data: {
+              full_name: name,
+              product: 'concursosai',
+            },
+          },
+        });
+        return { error, session: data.session, user: data.user };
       },
-    });
-
-    // CRM: converter visitor anonimo em lead com status "signup"
-    if (!error && data.user) {
-      convertVisitorToSignup({
-        userId: data.user.id,
-        email,
-        fullName: name,
-      });
-    }
-
-    return { error };
-  };
-
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
-      {children}
-    </AuthContext.Provider>
+      signIn: async ({ email, password }) => {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return { error };
+      },
+      signOut: async () => {
+        await supabase.auth.signOut();
+      },
+      sendPasswordReset: async (email) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth?mode=redefinir`,
+        });
+        return { error };
+      },
+      updatePassword: async (password) => {
+        const { error } = await supabase.auth.updateUser({ password });
+        return { error };
+      },
+    }),
+    [loading, session, user],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

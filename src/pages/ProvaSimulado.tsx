@@ -155,8 +155,8 @@ const ProvaSimulado = () => {
     return (
       <DashboardLayout>
         <div className="max-w-md mx-auto py-20 px-6 text-center">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-[#005344]/15 to-[#C9A84C]/15 items-center justify-center mb-4">
-            <Sparkles className="w-7 h-7 text-[#005344] animate-pulse" />
+          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1D4ED8]/15 to-[#F59E0B]/15 items-center justify-center mb-4">
+            <Sparkles className="w-7 h-7 text-[#1D4ED8] animate-pulse" />
           </div>
           <h1 className="font-['Manrope'] font-bold text-xl text-[#191C1D] mb-2">
             IA extraindo as primeiras questões…
@@ -166,7 +166,7 @@ const ProvaSimulado = () => {
             Não feche a página.
           </p>
           <div className="mt-6 h-1 w-48 mx-auto rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full w-1/3 bg-gradient-to-r from-[#005344] to-[#C9A84C] animate-pulse" />
+            <div className="h-full w-1/3 bg-gradient-to-r from-[#1D4ED8] to-[#F59E0B] animate-pulse" />
           </div>
         </div>
       </DashboardLayout>
@@ -279,10 +279,10 @@ const ProvaSimulado = () => {
           </button>
 
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-[0_4px_20px_rgba(25,28,29,0.04)]">
-            <div className="h-1 bg-gradient-to-r from-[#003D32] via-[#005344] via-[#006D5B] to-[#C9A84C]" />
+            <div className="h-1 bg-gradient-to-r from-[#1E40AF] via-[#1D4ED8] via-[#2563EB] to-[#F59E0B]" />
             <div className="p-8">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#005344] inline-flex items-center gap-2 mb-3">
-                <span className="w-5 h-px bg-[#C9A84C]" />
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#1D4ED8] inline-flex items-center gap-2 mb-3">
+                <span className="w-5 h-px bg-[#F59E0B]" />
                 Simulado online
               </p>
               <h1 className="font-['Manrope'] font-bold text-3xl text-[#191C1D] tracking-[-0.02em] mb-2">
@@ -301,9 +301,9 @@ const ProvaSimulado = () => {
 
               <button
                 onClick={startSimulado}
-                className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white font-['Manrope'] font-bold text-base shadow-[0_8px_24px_-8px_rgba(0,109,91,0.45)]"
+                className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white font-['Manrope'] font-bold text-base shadow-[0_8px_24px_-8px_rgba(0,109,91,0.45)]"
               >
-                <Sparkles className="w-4 h-4 text-[#C9A84C]" />
+                <Sparkles className="w-4 h-4 text-[#F59E0B]" />
                 Começar simulado
                 <ArrowRight className="w-4 h-4" />
               </button>
@@ -325,10 +325,10 @@ const ProvaSimulado = () => {
         <div className="max-w-4xl mx-auto py-10 px-6">
           {/* Score header */}
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden mb-6 shadow-[0_4px_20px_rgba(25,28,29,0.04)]">
-            <div className="h-1 bg-gradient-to-r from-[#003D32] via-[#005344] via-[#006D5B] to-[#C9A84C]" />
+            <div className="h-1 bg-gradient-to-r from-[#1E40AF] via-[#1D4ED8] via-[#2563EB] to-[#F59E0B]" />
             <div className="p-8 text-center">
-              <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-[#005344]/15 to-[#C9A84C]/15 items-center justify-center mb-4">
-                <Trophy className="w-8 h-8 text-[#005344]" />
+              <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1D4ED8]/15 to-[#F59E0B]/15 items-center justify-center mb-4">
+                <Trophy className="w-8 h-8 text-[#1D4ED8]" />
               </div>
               <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#4a5568] mb-2">
                 Resultado · {prova.titulo}
@@ -448,20 +448,20 @@ const ProvaSimulado = () => {
                       if (just) {
                         return (
                           <details className="mt-3 group" open={!correto}>
-                            <summary className="cursor-pointer text-xs font-semibold text-[#005344] inline-flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5 text-[#C9A84C]" />
+                            <summary className="cursor-pointer text-xs font-semibold text-[#1D4ED8] inline-flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5 text-[#F59E0B]" />
                               {just.origem === "ia"
                                 ? "Justificativa (gerada por IA)"
                                 : "Justificativa (do PDF)"}
                             </summary>
-                            <div className="mt-2 p-3 rounded-lg bg-gradient-to-br from-[#005344]/5 to-[#C9A84C]/5 border-l-2 border-[#C9A84C] text-sm text-[#191C1D] leading-relaxed whitespace-pre-wrap">
+                            <div className="mt-2 p-3 rounded-lg bg-gradient-to-br from-[#1D4ED8]/5 to-[#F59E0B]/5 border-l-2 border-[#F59E0B] text-sm text-[#191C1D] leading-relaxed whitespace-pre-wrap">
                               {just.text}
                             </div>
                             {just.origem === "ia" && (
                               <button
                                 onClick={() => handleExplainAi(q)}
                                 disabled={explainingQid === q.id}
-                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#005344] hover:underline disabled:opacity-50"
+                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#1D4ED8] hover:underline disabled:opacity-50"
                               >
                                 {explainingQid === q.id ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -478,7 +478,7 @@ const ProvaSimulado = () => {
                         <button
                           onClick={() => handleExplainAi(q)}
                           disabled={explainingQid === q.id}
-                          className="mt-3 inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white text-xs font-bold disabled:opacity-60"
+                          className="mt-3 inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white text-xs font-bold disabled:opacity-60"
                         >
                           {explainingQid === q.id ? (
                             <>
@@ -487,7 +487,7 @@ const ProvaSimulado = () => {
                             </>
                           ) : (
                             <>
-                              <Wand2 className="w-3.5 h-3.5 text-[#C9A84C]" />
+                              <Wand2 className="w-3.5 h-3.5 text-[#F59E0B]" />
                               Explicar com IA
                             </>
                           )}
@@ -534,7 +534,7 @@ const ProvaSimulado = () => {
             <h1 className="font-['Manrope'] font-bold text-base text-[#191C1D] truncate flex items-center gap-2">
               {prova.titulo}
               {isLive && prova.status === "extracting" && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#C9A84C]/15 text-[#8a6f26] text-[10px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F59E0B]/15 text-[#B45309] text-[10px] font-bold uppercase tracking-wider">
                   <Sparkles className="w-3 h-3 animate-pulse" />
                   ao vivo
                 </span>
@@ -544,7 +544,7 @@ const ProvaSimulado = () => {
               <span className="font-mono">
                 {currentIdx + 1}/{total}
                 {isLive && prova.status === "extracting" && (
-                  <span className="text-[#8a6f26]"> · IA carregando mais…</span>
+                  <span className="text-[#B45309]"> · IA carregando mais…</span>
                 )}
               </span>
               <span className="inline-flex items-center gap-1">
@@ -572,7 +572,7 @@ const ProvaSimulado = () => {
           <button
             onClick={finishSimulado}
             disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-[#C9A84C] text-[#191C1D] text-sm font-bold hover:brightness-105 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-[#F59E0B] text-[#191C1D] text-sm font-bold hover:brightness-105 disabled:opacity-60"
           >
             <Flag className="w-4 h-4" />
             Encerrar
@@ -582,7 +582,7 @@ const ProvaSimulado = () => {
         {/* Progress */}
         <div className="h-1 bg-slate-100 shrink-0">
           <div
-            className="h-full bg-gradient-to-r from-[#005344] to-[#C9A84C] transition-all"
+            className="h-full bg-gradient-to-r from-[#1D4ED8] to-[#F59E0B] transition-all"
             style={{ width: `${pctProgress}%` }}
           />
         </div>
@@ -592,7 +592,7 @@ const ProvaSimulado = () => {
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-3">
-                <span className="font-mono text-xs font-bold text-[#005344]">
+                <span className="font-mono text-xs font-bold text-[#1D4ED8]">
                   Q{String(q.numero).padStart(2, "0")}
                 </span>
                 <span className="text-[10.5px] text-[#94a3b8]">
@@ -625,8 +625,8 @@ const ProvaSimulado = () => {
                     }
                   } else if (selected) {
                     style =
-                      "border-[#005344] bg-[#005344]/5 shadow-[0_2px_8px_-2px_rgba(0,109,91,0.2)]";
-                    badgeStyle = "bg-[#005344] text-white";
+                      "border-[#1D4ED8] bg-[#1D4ED8]/5 shadow-[0_2px_8px_-2px_rgba(0,109,91,0.2)]";
+                    badgeStyle = "bg-[#1D4ED8] text-white";
                   }
                   return (
                     <button
@@ -650,7 +650,7 @@ const ProvaSimulado = () => {
                         <XCircle className="w-5 h-5 text-red-600 shrink-0" />
                       )}
                       {!reveal && selected && (
-                        <Check className="w-5 h-5 text-[#005344] shrink-0" />
+                        <Check className="w-5 h-5 text-[#1D4ED8] shrink-0" />
                       )}
                     </button>
                   );
@@ -694,7 +694,7 @@ const ProvaSimulado = () => {
                       isCurrent
                         ? "bg-[#191C1D] text-white border-[#191C1D]"
                         : isAnswered
-                          ? "bg-[#005344]/10 text-[#005344] border-[#005344]/30"
+                          ? "bg-[#1D4ED8]/10 text-[#1D4ED8] border-[#1D4ED8]/30"
                           : "bg-white text-[#94a3b8] border-slate-200"
                     }`}
                   >
@@ -715,7 +715,7 @@ const ProvaSimulado = () => {
               <button
                 onClick={finishSimulado}
                 disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white text-sm font-bold disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white text-sm font-bold disabled:opacity-60"
               >
                 <Flag className="w-4 h-4" />
                 Encerrar
@@ -760,10 +760,10 @@ function StudyPanel({
 }) {
   const correct = userAnswer === questao.gabarito;
   return (
-    <div className="mt-5 rounded-xl border-2 border-[#C9A84C]/40 bg-gradient-to-br from-[#C9A84C]/5 to-transparent overflow-hidden">
-      <div className="px-4 py-3 flex items-center gap-2 border-b border-[#C9A84C]/20 bg-white/60">
-        <GraduationCap className="w-4 h-4 text-[#8a6f26]" />
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[#8a6f26]">
+    <div className="mt-5 rounded-xl border-2 border-[#F59E0B]/40 bg-gradient-to-br from-[#F59E0B]/5 to-transparent overflow-hidden">
+      <div className="px-4 py-3 flex items-center gap-2 border-b border-[#F59E0B]/20 bg-white/60">
+        <GraduationCap className="w-4 h-4 text-[#B45309]" />
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[#B45309]">
           Modo estudo
         </span>
         <span
@@ -795,7 +795,7 @@ function StudyPanel({
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                   justificativa.origem === "pdf"
                     ? "bg-emerald-50 text-emerald-700"
-                    : "bg-[#C9A84C]/15 text-[#8a6f26]"
+                    : "bg-[#F59E0B]/15 text-[#B45309]"
                 }`}
               >
                 {justificativa.origem === "pdf" ? (
@@ -810,7 +810,7 @@ function StudyPanel({
                 <button
                   onClick={onExplainAi}
                   disabled={loading}
-                  className="ml-auto text-[11px] font-semibold text-[#005344] hover:underline disabled:opacity-50 inline-flex items-center gap-1"
+                  className="ml-auto text-[11px] font-semibold text-[#1D4ED8] hover:underline disabled:opacity-50 inline-flex items-center gap-1"
                   title="Regenerar"
                 >
                   {loading ? (
@@ -830,7 +830,7 @@ function StudyPanel({
           <button
             onClick={onExplainAi}
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white text-sm font-bold disabled:opacity-60"
+            className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white text-sm font-bold disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -839,7 +839,7 @@ function StudyPanel({
               </>
             ) : (
               <>
-                <Wand2 className="w-4 h-4 text-[#C9A84C]" />
+                <Wand2 className="w-4 h-4 text-[#F59E0B]" />
                 Pedir explicação detalhada à IA
               </>
             )}

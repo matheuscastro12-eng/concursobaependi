@@ -8,6 +8,8 @@ import { Menu, X, Loader2 } from 'lucide-react';
 import SupportWidget from '@/components/support/SupportWidget';
 import NpsModal from '@/components/support/NpsModal';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
+import logoWhite from '@/assets/logo-concursos-white.svg';
+import logoColor from '@/assets/logo-concursos.svg';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -39,40 +41,16 @@ interface NavGroup {
 
 const sidebarNavGroups: NavGroup[] = [
   {
-    label: 'Estudo',
+    label: 'Concurso',
     items: [
-      { icon: 'dashboard', label: 'Início', path: '/menu' },
-      { icon: 'auto_awesome', label: 'Estudo com IA', path: '/dashboard' },
+      { icon: 'description', label: 'Editais', path: '/editais', matchPaths: ['/editais'] },
+      { icon: 'upload_file', label: 'Provas Importadas', path: '/provas', matchPaths: ['/provas'] },
     ],
   },
   {
     label: 'Prática',
     items: [
-      {
-        icon: 'shutter_speed', label: 'Simulações', path: '/exam',
-        matchPaths: ['/exam', '/enamed', '/flashcards', '/provas'],
-        children: [
-          { icon: 'assignment', label: 'Simulação Normal', path: '/exam' },
-          { icon: 'history_edu', label: 'ENAMED', path: '/enamed' },
-          { icon: 'target', label: 'Simulado por Área', path: '/enamed?area=true', matchPaths: ['/enamed?area'] },
-          { icon: 'upload_file', label: 'Provas Importadas', path: '/provas', matchPaths: ['/provas'] },
-          { icon: 'style', label: 'Flashcards', path: '/flashcards' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Clínica',
-    items: [
-      { icon: 'menu_book', label: 'Whitebook', path: '/whitebook', matchPaths: ['/whitebook'] },
-      { icon: 'mic', label: 'Scribe Clínico', path: '/scribe', matchPaths: ['/scribe'] },
-    ],
-  },
-  {
-    label: 'Seus dados',
-    items: [
-      { icon: 'library_books', label: 'Biblioteca', path: '/library' },
-      { icon: 'science', label: 'Curadoria Científica', path: '/scientific-studio' },
+      { icon: 'quiz', label: 'Gerar Simulado IA', path: '/exam', matchPaths: ['/exam'] },
     ],
   },
 ];
@@ -172,12 +150,12 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
       <div className="px-6 mb-8">
         <button onClick={() => navigate('/menu')} className="group flex items-center gap-2.5">
           <img
-            src="/favicon.png"
-            alt="PreceptorMED"
-            className="h-9 w-9 transition-opacity group-hover:opacity-80 brightness-0 invert"
+            src={logoWhite}
+            alt="ConcursosAI"
+            className="h-9 w-9 transition-opacity group-hover:opacity-80"
           />
           <span className="font-['Manrope'] font-extrabold text-white text-lg tracking-tight transition-opacity group-hover:opacity-80">
-            PreceptorMED
+            ConcursosAI
           </span>
         </button>
         {/* Gold accent line — assinatura visual */}
@@ -221,7 +199,7 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
                     {active && !hasChildren && (
                       <span
                         className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
-                        style={{ background: 'linear-gradient(180deg, #E0C068 0%, #C9A84C 100%)' }}
+                        style={{ background: 'linear-gradient(180deg, #E0C068 0%, #F59E0B 100%)' }}
                       />
                     )}
                     <MI
@@ -342,7 +320,7 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
           </span>
           <span className="text-[10px] text-white/25 tracking-wide flex items-center gap-1">
             <span className="w-1 h-1 rounded-full bg-brand-gold/60" />
-            feito para PBL
+            concursos municipais
           </span>
         </div>
       </div>
@@ -378,9 +356,9 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
             >
               {mobileMenuOpen ? <X className="h-5 w-5 text-slate-600" /> : <Menu className="h-5 w-5 text-slate-600" />}
             </button>
-            <img src="/logo-new.png" alt="PreceptorMED" className="h-8 w-auto" />
+            <img src={logoColor} alt="ConcursosAI" className="h-8 w-auto" />
           </div>
-          <button onClick={() => navigate('/profile')} className="w-8 h-8 rounded-full bg-[#006D5B] text-white flex items-center justify-center font-bold text-xs">
+          <button onClick={() => navigate('/profile')} className="w-8 h-8 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-bold text-xs">
             {userInitial}
           </button>
         </header>
@@ -396,10 +374,10 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
         {!hideFooter && (
           <footer className="bg-white border-t border-slate-100 py-4">
             <div className="max-w-7xl mx-auto px-6 sm:px-10 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <span className="text-xs text-slate-400 font-medium">© {new Date().getFullYear()} PreceptorMED</span>
+              <span className="text-xs text-slate-400 font-medium">© {new Date().getFullYear()} ConcursosAI</span>
               <div className="flex gap-6">
                 {['Termos de Uso', 'Privacidade', 'Suporte'].map((label) => (
-                  <button key={label} className="text-xs text-slate-400 hover:text-[#006D5B] transition-colors duration-200">{label}</button>
+                  <button key={label} className="text-xs text-slate-400 hover:text-[#2563EB] transition-colors duration-200">{label}</button>
                 ))}
               </div>
             </div>
@@ -412,8 +390,8 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 space-y-5 animate-fade-up">
             <div className="text-center space-y-2">
-              <div className="inline-flex rounded-full bg-[#006D5B]/10 p-3 mb-1">
-                <MI name="phone_iphone" fill className="text-[28px] text-[#006D5B]" />
+              <div className="inline-flex rounded-full bg-[#2563EB]/10 p-3 mb-1">
+                <MI name="phone_iphone" fill className="text-[28px] text-[#2563EB]" />
               </div>
               <h2 className="text-xl font-bold text-[#191c1d]">Atualize seu telefone</h2>
               <p className="text-sm text-[#3e4945]/70 leading-relaxed">
@@ -427,7 +405,7 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
                 placeholder="(11) 99999-9999"
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
-                className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-[#006D5B] focus:ring-1 focus:ring-[#006D5B]/20 transition-colors"
+                className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/20 transition-colors"
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter' && phoneInput.trim()) handlePhoneSubmit(); }}
               />
@@ -435,7 +413,7 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
             <button
               onClick={handlePhoneSubmit}
               disabled={!phoneInput.trim() || phoneSaving}
-              className="w-full h-11 rounded-xl bg-[#006D5B] text-white font-semibold text-sm hover:bg-[#005344] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full h-11 rounded-xl bg-[#2563EB] text-white font-semibold text-sm hover:bg-[#1D4ED8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {phoneSaving ? <><Loader2 className="h-4 w-4 animate-spin" />Salvando...</> : 'Continuar'}
             </button>

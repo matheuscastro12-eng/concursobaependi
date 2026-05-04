@@ -90,26 +90,26 @@ const Provas = () => {
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#005344] inline-flex items-center gap-2.5 mb-3">
-              <span className="w-6 h-px bg-[#C9A84C]" />
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#1D4ED8] inline-flex items-center gap-2.5 mb-3">
+              <span className="w-6 h-px bg-[#F59E0B]" />
               Provas Importadas
             </p>
             <h1 className="font-['Manrope'] font-bold text-3xl sm:text-4xl tracking-[-0.025em] leading-[1.05] text-[#191C1D]">
               Sobe a prova,{" "}
-              <em className="not-italic font-medium text-[#8a6f26]">
+              <em className="not-italic font-medium text-[#B45309]">
                 a IA monta o simulado
               </em>
               .
             </h1>
             <p className="text-sm text-[#4a5568] mt-2 max-w-[58ch] leading-relaxed">
-              Envie um PDF de qualquer prova (residência, faculdade, ENAMED).
+              Envie um PDF de qualquer prova de concurso público (qualquer banca).
               A IA extrai as questões, mantém o gabarito original e roda como
               simulado online com correção e justificativa.
             </p>
           </div>
           <button
             onClick={() => setShowUpload(true)}
-            className="shrink-0 inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white font-bold text-sm font-['Manrope'] shadow-[0_8px_24px_-8px_rgba(0,109,91,0.45)] hover:shadow-[0_12px_28px_-6px_rgba(0,109,91,0.55)] transition-shadow"
+            className="shrink-0 inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white font-bold text-sm font-['Manrope'] shadow-[0_8px_24px_-8px_rgba(0,109,91,0.45)] hover:shadow-[0_12px_28px_-6px_rgba(0,109,91,0.55)] transition-shadow"
           >
             <Plus className="w-4 h-4" />
             Importar prova
@@ -213,10 +213,10 @@ function StatCard({
   accent: "primary" | "emerald" | "amber" | "gold";
 }) {
   const colors = {
-    primary: "from-[#006D5B]/10 text-[#005344]",
+    primary: "from-[#2563EB]/10 text-[#1D4ED8]",
     emerald: "from-emerald-100 text-emerald-700",
     amber:   "from-amber-100 text-amber-700",
-    gold:    "from-[#C9A84C]/15 text-[#8a6f26]",
+    gold:    "from-[#F59E0B]/15 text-[#B45309]",
   }[accent];
 
   return (
@@ -266,7 +266,7 @@ function ProvaCard({
   const progressLabel = hasLiveQuestions ? "Disponíveis ao vivo" : "Revisão";
 
   return (
-    <div className="group bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_1px_2px_rgba(25,28,29,0.04)] hover:shadow-[0_8px_28px_-12px_rgba(0,109,91,0.18)] hover:border-[#006D5B]/30 transition-all">
+    <div className="group bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_1px_2px_rgba(25,28,29,0.04)] hover:shadow-[0_8px_28px_-12px_rgba(0,109,91,0.18)] hover:border-[#2563EB]/30 transition-all">
       <div className="flex items-start gap-3 mb-3">
         <div
           className={`shrink-0 w-10 h-10 rounded-xl border ${cfg.color} flex items-center justify-center`}
@@ -281,7 +281,7 @@ function ProvaCard({
           </h3>
           <p className="text-xs text-[#4a5568] mt-0.5">
             {prova.num_alternativas} alternativas · {created}
-            {prova.num_paginas ? ` · ${prova.num_paginas} pgs` : ""}
+            {prova.num_paginas ? ` · ${prova.num_paginas} páginas` : ""}
           </p>
         </div>
         <button
@@ -320,7 +320,7 @@ function ProvaCard({
           </div>
           <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#005344] to-[#C9A84C] transition-all"
+              className="h-full bg-gradient-to-r from-[#1D4ED8] to-[#F59E0B] transition-all"
               style={{ width: `${aprovPct}%` }}
             />
           </div>
@@ -332,7 +332,7 @@ function ProvaCard({
           <>
             <button
               onClick={onSimulateLive}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white text-sm font-bold hover:brightness-110 transition-all shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white text-sm font-bold hover:brightness-110 transition-all shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
             >
               <Play className="w-4 h-4" />
               Continuar ao vivo
@@ -357,7 +357,7 @@ function ProvaCard({
           <>
             <button
               onClick={onSimulate}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white text-sm font-bold hover:brightness-110 transition-all shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white text-sm font-bold hover:brightness-110 transition-all shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
             >
               <Play className="w-4 h-4" />
               Simular
@@ -395,20 +395,20 @@ function ProvaCard({
 function EmptyState({ onUpload }: { onUpload: () => void }) {
   return (
     <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-white to-slate-50 p-10 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#006D5B]/10 mb-4">
-        <FileText className="w-8 h-8 text-[#005344]" />
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#2563EB]/10 mb-4">
+        <FileText className="w-8 h-8 text-[#1D4ED8]" />
       </div>
       <h3 className="font-['Manrope'] font-bold text-xl text-[#191C1D] tracking-tight mb-2">
         Nenhuma prova importada ainda
       </h3>
       <p className="text-sm text-[#4a5568] max-w-md mx-auto leading-relaxed mb-6">
-        Suba o PDF de uma prova de residência, ENAMED ou da sua faculdade. A IA
+        Suba o PDF de uma prova de concurso público (qualquer banca ou órgão). A IA
         extrai as questões com o gabarito original e monta um simulado online no
         nosso formato.
       </p>
       <button
         onClick={onUpload}
-        className="inline-flex items-center gap-2 px-6 h-11 rounded-xl bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white font-bold text-sm font-['Manrope'] shadow-[0_8px_24px_-8px_rgba(0,109,91,0.45)]"
+        className="inline-flex items-center gap-2 px-6 h-11 rounded-xl bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white font-bold text-sm font-['Manrope'] shadow-[0_8px_24px_-8px_rgba(0,109,91,0.45)]"
       >
         <Upload className="w-4 h-4" />
         Importar primeira prova
@@ -435,7 +435,7 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
             key={s.n}
             className="p-4 rounded-xl border border-slate-200 bg-white"
           >
-            <div className="font-mono text-xs text-[#8a6f26] font-bold mb-1">
+            <div className="font-mono text-xs text-[#B45309] font-bold mb-1">
               {s.n}
             </div>
             <div className="font-['Manrope'] font-bold text-sm text-[#191C1D] mb-1">
@@ -596,12 +596,12 @@ function UploadModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar */}
-        <div className="relative h-1 bg-gradient-to-r from-[#003D32] via-[#005344] via-[#006D5B] to-[#C9A84C]" />
+        <div className="relative h-1 bg-gradient-to-r from-[#1E40AF] via-[#1D4ED8] via-[#2563EB] to-[#F59E0B]" />
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#005344] inline-flex items-center gap-2 mb-2">
-                <span className="w-5 h-px bg-[#C9A84C]" />
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#1D4ED8] inline-flex items-center gap-2 mb-2">
+                <span className="w-5 h-px bg-[#F59E0B]" />
                 Nova prova
               </p>
               <h2 className="font-['Manrope'] font-bold text-xl text-[#191C1D] tracking-[-0.015em]">
@@ -626,7 +626,7 @@ function UploadModal({
               ① Arquivo PDF
             </label>
             {!file ? (
-              <label className="relative flex flex-col items-center justify-center h-32 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-[#006D5B] hover:bg-[#006D5B]/5 transition-colors cursor-pointer">
+              <label className="relative flex flex-col items-center justify-center h-32 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-[#2563EB] hover:bg-[#2563EB]/5 transition-colors cursor-pointer">
                 <input
                   type="file"
                   accept="application/pdf"
@@ -677,8 +677,8 @@ function UploadModal({
               value={titulo}
               onChange={(e) => setTitulo(e.target.value.slice(0, 200))}
               disabled={isProcessing}
-              placeholder="Ex: USP 2024, ENAMED 2023, R+ UFRJ Clínica…"
-              className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white font-['Manrope'] text-base font-semibold text-[#191C1D] placeholder-[#94a3b8] outline-none focus:border-[#006D5B] focus:ring-4 focus:ring-[#006D5B]/10 transition-shadow"
+              placeholder="Ex: Prefeitura de São Paulo 2024, VUNESP Agente Administrativo…"
+              className="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white font-['Manrope'] text-base font-semibold text-[#191C1D] placeholder-[#94a3b8] outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10 transition-shadow"
             />
           </div>
 
@@ -695,7 +695,7 @@ function UploadModal({
                   disabled={isProcessing}
                   className={`h-11 rounded-xl font-['Manrope'] font-bold text-sm border-2 transition-all ${
                     numAlt === n
-                      ? "border-[#006D5B] bg-[#006D5B] text-white shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
+                      ? "border-[#2563EB] bg-[#2563EB] text-white shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
                       : "border-slate-200 bg-white text-[#4a5568] hover:border-slate-300"
                   }`}
                 >
@@ -710,17 +710,17 @@ function UploadModal({
 
           {/* Step 4: justificativa IA */}
           <div>
-            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-slate-300 has-[:checked]:border-[#006D5B] has-[:checked]:bg-[#006D5B]/5 transition-colors">
+            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-slate-300 has-[:checked]:border-[#2563EB] has-[:checked]:bg-[#2563EB]/5 transition-colors">
               <input
                 type="checkbox"
                 checked={gerarIa}
                 onChange={(e) => setGerarIa(e.target.checked)}
                 disabled={isProcessing}
-                className="mt-0.5 w-4 h-4 accent-[#006D5B]"
+                className="mt-0.5 w-4 h-4 accent-[#2563EB]"
               />
               <div>
                 <p className="text-sm font-bold text-[#191C1D] flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#C9A84C]" />
+                  <Sparkles className="w-4 h-4 text-[#F59E0B]" />
                   Gerar justificativa via IA
                 </p>
                 <p className="text-xs text-[#4a5568] leading-relaxed mt-0.5">
@@ -733,19 +733,19 @@ function UploadModal({
 
           {/* Step 5: modo expresso */}
           <div>
-            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-slate-300 has-[:checked]:border-[#C9A84C] has-[:checked]:bg-[#C9A84C]/5 transition-colors">
+            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-slate-300 has-[:checked]:border-[#F59E0B] has-[:checked]:bg-[#F59E0B]/5 transition-colors">
               <input
                 type="checkbox"
                 checked={modoExpresso}
                 onChange={(e) => setModoExpresso(e.target.checked)}
                 disabled={isProcessing}
-                className="mt-0.5 w-4 h-4 accent-[#C9A84C]"
+                className="mt-0.5 w-4 h-4 accent-[#F59E0B]"
               />
               <div>
                 <p className="text-sm font-bold text-[#191C1D] flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#8a6f26]" />
+                  <Sparkles className="w-4 h-4 text-[#B45309]" />
                   Modo expresso
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#C9A84C]/15 text-[#8a6f26] font-mono uppercase tracking-wider">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#F59E0B]/15 text-[#B45309] font-mono uppercase tracking-wider">
                     novo
                   </span>
                 </p>
@@ -766,9 +766,9 @@ function UploadModal({
 
           {/* Progress states */}
           {isProcessing && (
-            <div className="p-4 bg-gradient-to-br from-[#005344]/5 to-[#C9A84C]/5 border border-[#006D5B]/20 rounded-xl">
+            <div className="p-4 bg-gradient-to-br from-[#1D4ED8]/5 to-[#F59E0B]/5 border border-[#2563EB]/20 rounded-xl">
               <div className="flex items-center gap-3 mb-2">
-                <Loader2 className="w-5 h-5 text-[#005344] animate-spin shrink-0" />
+                <Loader2 className="w-5 h-5 text-[#1D4ED8] animate-spin shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm font-bold text-[#191C1D]">
                     {stage === "extracting_text"
@@ -792,7 +792,7 @@ function UploadModal({
               </div>
               <div className="h-1.5 rounded-full bg-white/60 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#005344] to-[#C9A84C] transition-all"
+                  className="h-full bg-gradient-to-r from-[#1D4ED8] to-[#F59E0B] transition-all"
                   style={{
                     width:
                       stage === "extracting_text"
@@ -821,12 +821,12 @@ function UploadModal({
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="inline-flex items-center gap-2 px-5 h-10 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
+            className="inline-flex items-center gap-2 px-5 h-10 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)]"
           >
             {isProcessing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Sparkles className="w-4 h-4 text-[#C9A84C]" />
+              <Sparkles className="w-4 h-4 text-[#F59E0B]" />
             )}
             {isProcessing ? "Processando…" : "Importar e processar"}
           </button>

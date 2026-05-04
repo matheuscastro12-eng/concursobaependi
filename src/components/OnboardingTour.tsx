@@ -184,8 +184,8 @@ const OnboardingTour = ({ steps, tourKey, onComplete }: OnboardingTourProps) => 
 
             {/* Header */}
             <div className="flex items-center gap-2.5 mb-3">
-              <div className="h-9 w-9 rounded-xl bg-[#006D5B]/10 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="h-4 w-4 text-[#006D5B]" />
+              <div className="h-9 w-9 rounded-xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-4 w-4 text-[#2563EB]" />
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
@@ -207,9 +207,9 @@ const OnboardingTour = ({ steps, tourKey, onComplete }: OnboardingTourProps) => 
                   key={i}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     i === currentStep
-                      ? 'w-6 bg-[#006D5B]'
+                      ? 'w-6 bg-[#2563EB]'
                       : i < currentStep
-                      ? 'w-1.5 bg-[#006D5B]/40'
+                      ? 'w-1.5 bg-[#2563EB]/40'
                       : 'w-1.5 bg-slate-200'
                   }`}
                 />
@@ -232,7 +232,7 @@ const OnboardingTour = ({ steps, tourKey, onComplete }: OnboardingTourProps) => 
               <Button
                 size="sm"
                 onClick={next}
-                className="gap-1 text-xs h-9 bg-[#006D5B] hover:bg-[#005344] text-white"
+                className="gap-1 text-xs h-9 bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
               >
                 {currentStep === steps.length - 1 ? 'Concluir' : 'Próximo'}
                 {currentStep < steps.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}

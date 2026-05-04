@@ -11,8 +11,8 @@ interface GenerationProgressProps {
 
 const statusMessages = [
   { min: 0, max: 15, message: 'Analisando tema...', icon: Brain },
-  { min: 15, max: 40, message: 'Pesquisando literatura médica...', icon: FileText },
-  { min: 40, max: 70, message: 'Gerando conteúdo técnico...', icon: Sparkles },
+  { min: 15, max: 40, message: 'Consultando o conteúdo programático...', icon: FileText },
+  { min: 40, max: 70, message: 'Gerando questões no padrão da banca...', icon: Sparkles },
   { min: 70, max: 95, message: 'Finalizando estrutura...', icon: FileText },
   { min: 95, max: 100, message: 'Concluído!', icon: CheckCircle },
 ];

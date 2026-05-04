@@ -190,9 +190,9 @@ serve(async (req) => {
     (alt, i) => `${String.fromCharCode(65 + i)}) ${alt}`,
   ).join("\n");
 
-  const systemPrompt = `Voce e um Preceptor Academico de Medicina. Sua tarefa e justificar com rigor cientifico e linguagem clinica precisa qual a alternativa correta de uma questao e por que cada uma das outras esta errada. Use mecanismos fisiopatologicos, niveis de evidencia, dados epidemiologicos brasileiros (DATASUS/SUS/diretrizes brasileiras quando relevante). NAO invente referencias com pagina/capitulo. Se houver controversia na literatura, sinalize. Cite livros/diretrizes apenas pelo nome (ex: Harrison, Diretriz SBC 2024).`;
+  const systemPrompt = `Voce e um professor especialista em concursos publicos municipais. Sua tarefa e justificar com precisao juridica e conceitual qual a alternativa correta de uma questao e por que cada uma das outras esta errada. Cite o fundamento legal, doutrina ou conceito pertinente de forma objetiva. NAO invente referencias com pagina/artigo especifico. Se houver divergencia doutrinaria, sinalize brevemente. Use linguagem clara e adequada para estudo de concursos.`;
 
-  const userPrompt = `Questao de prova de medicina:
+  const userPrompt = `Questao de concurso publico:
 
 ${questao.enunciado}
 
@@ -203,10 +203,10 @@ Gabarito oficial: ${questao.gabarito}
 Produza uma justificativa estruturada em ate 5 paragrafos densos:
 
 1. **Conceito-chave** que a questao testa (1 paragrafo)
-2. **Por que a alternativa ${questao.gabarito} esta correta** (mecanismo + evidencia)
+2. **Por que a alternativa ${questao.gabarito} esta correta** (fundamento legal/conceitual)
 3. **Por que cada uma das outras esta errada** (analise alternativa por alternativa)
-4. **Pegadinhas / pearls** se houver (opcional)
-5. **Resumo de conduta** ou regra-mnemonica para fixar (opcional)
+4. **Pegadinhas / pontos de atencao** se houver (opcional)
+5. **Regra ou mnemonica** para fixar (opcional)
 
 Use markdown limitado: **negrito** em termos chave. NAO use cabecalhos com #. Comece direto pelo conteudo, sem introducao do tipo "Vamos analisar...".`;
 

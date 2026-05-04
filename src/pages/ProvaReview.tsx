@@ -253,7 +253,7 @@ const ProvaReview = () => {
               <button
                 onClick={handleFinalize}
                 disabled={counts.approved === 0}
-                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white text-sm font-bold shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white text-sm font-bold shadow-[0_4px_12px_-4px_rgba(0,109,91,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Play className="w-4 h-4" />
                 Finalizar e simular
@@ -264,8 +264,8 @@ const ProvaReview = () => {
 
         {/* Status banner durante extração */}
         {isWorking && (
-          <div className="bg-gradient-to-br from-[#005344]/8 to-[#C9A84C]/8 border-b border-[#006D5B]/20 px-6 py-4 flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-[#005344] animate-spin shrink-0" />
+          <div className="bg-gradient-to-br from-[#1D4ED8]/8 to-[#F59E0B]/8 border-b border-[#2563EB]/20 px-6 py-4 flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-[#1D4ED8] animate-spin shrink-0" />
             <div>
               <p className="text-sm font-bold text-[#191C1D]">
                 IA processando questões…
@@ -312,7 +312,7 @@ const ProvaReview = () => {
                     href={pdfUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-semibold text-[#005344] hover:underline"
+                    className="text-xs font-semibold text-[#1D4ED8] hover:underline"
                   >
                     Abrir em nova aba
                   </a>
@@ -367,7 +367,7 @@ const ProvaReview = () => {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Buscar nº ou texto…"
-                    className="ml-auto h-8 px-3 rounded-lg border border-slate-200 text-xs w-48 outline-none focus:border-[#006D5B]"
+                    className="ml-auto h-8 px-3 rounded-lg border border-slate-200 text-xs w-48 outline-none focus:border-[#2563EB]"
                   />
                 </div>
               </div>
@@ -419,7 +419,7 @@ const ProvaReview = () => {
                 <div className="md:hidden px-4 py-3 border-t border-slate-200 bg-white">
                   <button
                     onClick={handleFinalize}
-                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gradient-to-br from-[#003D32] via-[#005344] to-[#006D5B] text-white font-bold text-sm"
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] text-white font-bold text-sm"
                   >
                     <Play className="w-4 h-4" />
                     Finalizar e simular ({counts.approved})
@@ -490,7 +490,7 @@ function QuestaoCard({
     >
       {/* Header */}
       <div className="px-4 sm:px-5 py-3 flex items-center gap-2 border-b border-slate-100">
-        <span className="font-mono text-xs font-bold text-[#005344]">
+        <span className="font-mono text-xs font-bold text-[#1D4ED8]">
           Q{String(questao.numero).padStart(2, "0")}
         </span>
         <span
@@ -503,7 +503,7 @@ function QuestaoCard({
             questao.justificativa_origem === "pdf"
               ? "bg-emerald-50 text-emerald-700"
               : questao.justificativa_origem === "ia"
-                ? "bg-[#C9A84C]/15 text-[#8a6f26]"
+                ? "bg-[#F59E0B]/15 text-[#B45309]"
                 : "bg-slate-100 text-slate-600"
           }`}
         >
@@ -594,7 +594,7 @@ function QuestaoCard({
               <div className="mt-3">
                 <button
                   onClick={() => setExpanded((v) => !v)}
-                  className="text-xs font-semibold text-[#005344] inline-flex items-center gap-1 hover:underline"
+                  className="text-xs font-semibold text-[#1D4ED8] inline-flex items-center gap-1 hover:underline"
                 >
                   {expanded ? (
                     <ChevronUp className="w-3.5 h-3.5" />
@@ -604,7 +604,7 @@ function QuestaoCard({
                   {expanded ? "Ocultar justificativa" : "Ver justificativa"}
                 </button>
                 {expanded && (
-                  <div className="mt-2 p-3 rounded-lg bg-gradient-to-br from-[#005344]/4 to-[#C9A84C]/4 border-l-3 border-[#C9A84C] text-sm text-[#191C1D] leading-relaxed whitespace-pre-wrap">
+                  <div className="mt-2 p-3 rounded-lg bg-gradient-to-br from-[#1D4ED8]/4 to-[#F59E0B]/4 border-l-3 border-[#F59E0B] text-sm text-[#191C1D] leading-relaxed whitespace-pre-wrap">
                     {questao.justificativa}
                   </div>
                 )}
@@ -622,7 +622,7 @@ function QuestaoCard({
                 value={enunciado}
                 onChange={(e) => setEnunciado(e.target.value)}
                 rows={5}
-                className="w-full p-3 rounded-lg border border-slate-200 text-sm leading-relaxed font-['DM_Sans'] outline-none focus:border-[#006D5B] focus:ring-2 focus:ring-[#006D5B]/15 resize-y"
+                className="w-full p-3 rounded-lg border border-slate-200 text-sm leading-relaxed font-['DM_Sans'] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/15 resize-y"
               />
             </div>
             <div>
@@ -652,7 +652,7 @@ function QuestaoCard({
                           next[i] = e.target.value;
                           setAlternativas(next);
                         }}
-                        className="flex-1 px-3 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-[#006D5B]"
+                        className="flex-1 px-3 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-[#2563EB]"
                       />
                     </div>
                   );
@@ -671,7 +671,7 @@ function QuestaoCard({
                 onChange={(e) => setJustificativa(e.target.value)}
                 rows={4}
                 placeholder="Texto explicativo (opcional)"
-                className="w-full p-3 rounded-lg border border-slate-200 text-sm leading-relaxed font-['DM_Sans'] outline-none focus:border-[#006D5B] focus:ring-2 focus:ring-[#006D5B]/15 resize-y"
+                className="w-full p-3 rounded-lg border border-slate-200 text-sm leading-relaxed font-['DM_Sans'] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/15 resize-y"
               />
             </div>
             <div className="flex items-center justify-end gap-2 pt-1">

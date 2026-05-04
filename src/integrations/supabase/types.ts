@@ -14,6 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      generated_exam_cache: {
+        Row: {
+          banca: string
+          cache_key: string
+          cargo: string | null
+          created_at: string
+          id: string
+          nivel: string
+          num_alternativas: number
+          quantidade: number
+          resultado: string
+          source_user_id: string | null
+          tema: string
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          banca?: string
+          cache_key: string
+          cargo?: string | null
+          created_at?: string
+          id?: string
+          nivel: string
+          num_alternativas: number
+          quantidade: number
+          resultado: string
+          source_user_id?: string | null
+          tema: string
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          banca?: string
+          cache_key?: string
+          cargo?: string | null
+          created_at?: string
+          id?: string
+          nivel?: string
+          num_alternativas?: number
+          quantidade?: number
+          resultado?: string
+          source_user_id?: string | null
+          tema?: string
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: []
+      }
+      payment_submissions: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          payment_method: string
+          pix_payload: string
+          proof_file_name: string
+          proof_mime_type: string | null
+          proof_size_bytes: number | null
+          proof_storage_path: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          payment_method?: string
+          pix_payload: string
+          proof_file_name: string
+          proof_mime_type?: string | null
+          proof_size_bytes?: number | null
+          proof_storage_path: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          payment_method?: string
+          pix_payload?: string
+          proof_file_name?: string
+          proof_mime_type?: string | null
+          proof_size_bytes?: number | null
+          proof_storage_path?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       crm_funnel_events: {
         Row: {
           created_at: string

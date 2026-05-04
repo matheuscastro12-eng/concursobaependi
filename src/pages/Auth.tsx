@@ -1,570 +1,567 @@
-import { useState, useEffect } from 'react';
-import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  BookOpenCheck,
+  Check,
+  Copy,
+  CreditCard,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  QrCode,
+  Sparkles,
+  Upload,
+  UserRound,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
-import logoPreceptor from '@/assets/logo-preceptor.png';
-import { getEasyflowLink } from '@/utils/easyflow';
+import { useAuth } from '@/contexts/AuthContext';
+import { PIX_PAYMENT, submitPixPaymentProof } from '@/lib/paymentSubmissions';
+import logoColor from '@/assets/logo-concursos.svg';
+
+type AuthMode = 'entrar' | 'criar' | 'recuperar' | 'redefinir';
+
+const friendlyAuthError = (message: string) => {
+  if (/invalid login credentials/i.test(message)) return 'Email ou senha incorretos.';
+  if (/already registered|already been registered|user already/i.test(message)) return 'Este email já tem uma conta.';
+  if (/password/i.test(message) && /short|weak|six|6/i.test(message)) return 'Use uma senha com pelo menos 6 caracteres.';
+  return message;
+};
+
+const getRedirectTarget = (next: string | null) => {
+  if (!next || !next.startsWith('/')) return '/';
+  if (next.startsWith('//')) return '/';
+  return next;
+};
+
+const formatFileSize = (size: number) => {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const Auth = () => {
-  const { user, loading: authLoading, signIn, signUp } = useAuth();
+  const { user, loading: authLoading, signIn, signUp, sendPasswordReset, updatePassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(false);
-  const [redirectingToCheckout, setRedirectingToCheckout] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>(
-    searchParams.get('tab') === 'signup' ? 'signup' : 'login'
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const next = useMemo(() => getRedirectTarget(searchParams.get('next')), [searchParams]);
+  const initialMode = (searchParams.get('mode') as AuthMode | null) ?? 'entrar';
+  const [mode, setMode] = useState<AuthMode>(
+    ['entrar', 'criar', 'recuperar', 'redefinir'].includes(initialMode) ? initialMode : 'entrar',
   );
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
 
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [migrationWarning, setMigrationWarning] = useState(false);
-  const [signupName, setSignupName] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
-  const planType = searchParams.get('plan') as 'monthly' | 'annual' | null;
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    const params = new URLSearchParams(searchParams);
+    params.set('mode', nextMode);
+    setSearchParams(params, { replace: true });
+  };
 
-  useEffect(() => {
-    if (user && planType && !redirectingToCheckout) {
-      const link = getEasyflowLink(planType, user.email ?? undefined);
-      if (link) {
-        setRedirectingToCheckout(true);
-        window.location.href = link;
-      }
+  const handleCopyPix = async () => {
+    try {
+      await navigator.clipboard.writeText(PIX_PAYMENT.payload);
+      setPixCopied(true);
+      window.setTimeout(() => setPixCopied(false), 1800);
+      toast({ title: 'PIX copiado', description: 'Agora é só colar no app do banco.' });
+    } catch (error) {
+      toast({
+        title: 'Não conseguimos copiar',
+        description: error instanceof Error ? error.message : 'Copie o código manualmente.',
+        variant: 'destructive',
+      });
     }
-  }, [user, planType, redirectingToCheckout, navigate]);
+  };
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <Loader2 className="h-6 w-6 animate-spin text-brand-primary" />
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-700" />
       </div>
     );
   }
 
-  if (user) return <Navigate to="/menu" replace />;
+  if (user && mode !== 'redefinir') return <Navigate to={next} replace />;
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     setLoading(true);
-    setMigrationWarning(false);
-    const { error } = await signIn(loginEmail, loginPassword);
-    if (error) {
-      if (error.message === 'Invalid login credentials') {
-        setMigrationWarning(true);
-      }
-      toast({ title: 'Erro ao entrar', description: error.message, variant: 'destructive' });
-    }
+    const { error } = await signIn({ email, password });
     setLoading(false);
-  };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (signupPassword !== signupConfirmPassword) {
-      toast({ title: 'Erro', description: 'As senhas não coincidem', variant: 'destructive' });
+    if (error) {
+      toast({ title: 'Não conseguimos entrar', description: friendlyAuthError(error.message), variant: 'destructive' });
       return;
     }
-    if (signupPassword.length < 6) {
-      toast({ title: 'Erro', description: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
+
+    navigate(next, { replace: true });
+  };
+
+  const handleSignup = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!proofFile) {
+      toast({
+        title: 'Anexe o comprovante',
+        description: 'Selecione o arquivo do pagamento para concluir o cadastro.',
+        variant: 'destructive',
+      });
       return;
     }
+
+    if (password !== confirmPassword) {
+      toast({ title: 'Confira a senha', description: 'As duas senhas precisam ser iguais.', variant: 'destructive' });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({ title: 'Senha muito curta', description: 'Use pelo menos 6 caracteres.', variant: 'destructive' });
+      return;
+    }
+
     setLoading(true);
-    const { error } = await signUp(
-      signupEmail,
-      signupPassword,
-      signupName,
-      '',
-      planType ? 'paid_signup' : 'organic',
-    );
-    if (error) {
-      toast({ title: 'Erro ao criar conta', description: error.message, variant: 'destructive' });
-      setLoading(false);
-    } else {
-      toast({ title: 'Conta criada', description: 'Seu teste de 3 dias começou agora.' });
-      if (!planType) {
-        navigate('/inscricao', { replace: true });
-      }
-      setLoading(false);
-    }
-  };
+    const { error, session, user: createdUser } = await signUp({ email, password, name });
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    if (error) {
+      setLoading(false);
+      toast({ title: 'Não conseguimos criar a conta', description: friendlyAuthError(error.message), variant: 'destructive' });
+      return;
+    }
+
+    if (!session || !createdUser) {
+      setLoading(false);
+      toast({
+        title: 'Conta criada',
+        description: 'Ative o acesso automático no Supabase para enviar o comprovante logo após o cadastro.',
+      });
+      switchMode('entrar');
+      return;
+    }
+
+    try {
+      await submitPixPaymentProof({
+        userId: createdUser.id,
+        email,
+        fullName: name,
+        file: proofFile,
+      });
+    } catch (uploadError) {
+      setLoading(false);
+      toast({
+        title: 'Conta criada, mas faltou o comprovante',
+        description: uploadError instanceof Error ? uploadError.message : 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(false);
+    toast({
+      title: 'Conta criada',
+      description: 'Recebemos seu comprovante. Vamos liberar o acesso após a conferência.',
     });
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Email enviado', description: 'Verifique sua caixa de entrada para redefinir a senha.' });
-      setShowForgotPassword(false);
-    }
-    setForgotLoading(false);
+    navigate(next, { replace: true });
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleRecover = async (event: React.FormEvent) => {
+    event.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/menu',
-      },
-    });
+    const { error } = await sendPasswordReset(email);
+    setLoading(false);
+
     if (error) {
-      toast({ title: 'Erro ao entrar com Google', description: error.message, variant: 'destructive' });
-      setLoading(false);
+      toast({ title: 'Não conseguimos enviar o link', description: friendlyAuthError(error.message), variant: 'destructive' });
+      return;
     }
+
+    toast({ title: 'Link enviado', description: 'Veja seu email para redefinir a senha.' });
+    switchMode('entrar');
   };
 
-  // SVG noise texture inline (subtle grain)
-  const noiseTexture = `data:image/svg+xml;utf8,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="1"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.18 0"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.5"/></svg>`
-  )}`;
+  const handleUpdatePassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (password !== confirmPassword) {
+      toast({ title: 'Confira a senha', description: 'As duas senhas precisam ser iguais.', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await updatePassword(password);
+    setLoading(false);
+
+    if (error) {
+      toast({ title: 'Não conseguimos alterar a senha', description: friendlyAuthError(error.message), variant: 'destructive' });
+      return;
+    }
+
+    toast({ title: 'Senha atualizada', description: 'Você já pode continuar estudando.' });
+    navigate(next, { replace: true });
+  };
+
+  const titleByMode = {
+    entrar: 'Entrar no ConcursosAI',
+    criar: 'Criar conta',
+    recuperar: 'Recuperar senha',
+    redefinir: 'Definir nova senha',
+  };
+
+  const subtitleByMode = {
+    entrar: 'Acesse seus simulados e continue de onde parou.',
+    criar: 'Pague via PIX, anexe o comprovante e comece a estudar em poucos segundos.',
+    recuperar: 'Informe seu email para receber o link de recuperação.',
+    redefinir: 'Escolha uma nova senha para sua conta.',
+  };
 
   return (
-    <div className="flex min-h-screen">
-      {/* ═══════════════════════════════════════════════
-          LEFT PANEL — editorial, typography-first
-          ═══════════════════════════════════════════════ */}
-      <aside
-        className="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col justify-between overflow-hidden text-white"
-        style={{ background: 'var(--pmed-gradient-primary)' }}
-      >
-        {/* Grain texture overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none mix-blend-overlay"
-          style={{ backgroundImage: `url("${noiseTexture}")` }}
-        />
-        {/* Subtle gold glow — asymmetric accent */}
-        <div className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full bg-brand-gold/10 blur-[120px] pointer-events-none" />
-        <div className="absolute -bottom-32 -left-16 w-[360px] h-[360px] rounded-full bg-brand-primary/30 blur-[100px] pointer-events-none" />
-
-        {/* Top — logo + tagline */}
-        <div className="relative z-10 px-12 xl:px-16 pt-12">
-          <div className="flex items-center gap-3 mb-2">
-            <img src={logoPreceptor} alt="PreceptorMED" className="h-10 w-10" />
-            <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                PreceptorMED
-              </span>
-              <span className="text-[10px] text-brand-gold/90 font-semibold uppercase tracking-[0.15em]">
-                Curadoria de medicina acadêmica
-              </span>
-            </div>
-          </div>
-          <div className="mt-1 h-px w-16 bg-gradient-to-r from-brand-gold to-transparent" />
-        </div>
-
-        {/* Middle — typography hero + real example */}
-        <div className="relative z-10 px-12 xl:px-16 flex-1 flex flex-col justify-center py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="max-w-xl"
-          >
-            <p className="text-[11px] font-semibold text-brand-gold uppercase tracking-[0.2em] mb-5">
-              Para estudantes de medicina brasileiros
-            </p>
-            <h1
-              className="text-4xl xl:text-5xl font-bold leading-[1.05] tracking-tight mb-8"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              Estude com rigor.
-              <br />
-              <span className="text-brand-gold/90">Não com resumos de slide.</span>
-            </h1>
-            <p className="text-[15px] text-white/75 leading-[1.7] mb-10 max-w-lg">
-              Resumos de PBL com fisiopatologia em cascata, correlação clínico-básica e terminologia técnica. Em português, no padrão do fechamento acadêmico.
-            </p>
-          </motion.div>
-
-          {/* Real preview card — concrete proof */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="relative bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-lg p-5 max-w-md"
-          >
-            <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10">
-              <span className="text-[11px] font-semibold text-white/60 tracking-wide">
-                Endocrinologia · Emergência
-              </span>
-              <span className="text-[9px] px-2 py-0.5 bg-brand-gold/20 text-brand-gold font-bold rounded">
-                EXEMPLO
-              </span>
-            </div>
-            <h4 className="text-[15px] font-bold text-white mb-3" style={{ fontFamily: 'var(--font-display)' }}>
-              Cetoacidose Diabética
-            </h4>
-            <p className="text-[11px] font-bold text-brand-gold/80 uppercase tracking-wider mb-1.5">
-              Fisiopatologia em cascata
-            </p>
-            <p className="text-[13px] text-white/75 leading-relaxed">
-              A deficiência de <span className="text-white font-medium">insulina</span>, somada ao excesso de{' '}
-              <span className="text-white font-medium">glucagon, cortisol e catecolaminas</span>, ativa a{' '}
-              <span className="text-white font-medium">CPT-1</span> hepática e desencadeia β-oxidação com produção de β-hidroxibutirato e acetoacetato…
-            </p>
-            <div className="pointer-events-none absolute inset-x-5 bottom-5 h-10 bg-gradient-to-t from-[#00473c] to-transparent" />
-          </motion.div>
-        </div>
-
-        {/* Bottom — quiet footer */}
-        <div className="relative z-10 px-12 xl:px-16 pb-10">
-          <div className="h-px w-full bg-white/5 mb-5" />
-          <p className="text-[11px] text-white/40 leading-relaxed max-w-md">
-            ENAMED no padrão INEP · Chat com busca no PubMed · Flashcards com SM-2 real · Biblioteca pessoal exportável
-          </p>
-        </div>
-      </aside>
-
-      {/* ═══════════════════════════════════════════════
-          RIGHT PANEL — form, clean and direct
-          ═══════════════════════════════════════════════ */}
-      <main className="flex w-full lg:w-[52%] xl:w-[48%] flex-col px-5 sm:px-8 py-8 sm:py-10 bg-white relative">
-        {/* Top bar — back button */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost" size="sm"
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 cai-animated-grid">
+      <header className="h-16 border-b border-slate-200 bg-white/90 backdrop-blur-xl cai-fade-in">
+        <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
+          <button
             onClick={() => navigate('/')}
-            className="text-slate-500 hover:text-brand-ink gap-1.5 text-xs -ml-2"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-700 transition-colors cai-interactive"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-4 w-4" />
             Voltar
-          </Button>
-        </div>
-
-        {/* Mobile branding */}
-        <div className="lg:hidden mt-8 mb-6 flex items-center gap-3">
-          <img src={logoPreceptor} alt="PreceptorMED" className="h-10 w-10" />
-          <div>
-            <p className="font-bold text-brand-ink tracking-tight leading-none" style={{ fontFamily: 'var(--font-display)' }}>
-              PreceptorMED
-            </p>
-            <p className="text-[10px] text-brand-gold font-semibold uppercase tracking-[0.15em] mt-1">
-              Curadoria acadêmica
-            </p>
+          </button>
+          <div className="flex items-center gap-2">
+            <img src={logoColor} alt="ConcursosAI" className="h-8 w-8" />
+            <span className="font-['Manrope'] font-extrabold tracking-tight">ConcursosAI</span>
           </div>
         </div>
+      </header>
 
-        {/* Form container — centered vertically on desktop */}
-        <div className="flex-1 flex items-center">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="w-full max-w-[420px] mx-auto"
-          >
-            {/* Header with large display title */}
-            <div className="mb-8">
-              <p className="text-[11px] font-semibold text-brand-primary uppercase tracking-[0.2em] mb-3">
-                {activeTab === 'login' ? 'Entrar na conta' : 'Criar conta gratuita'}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12 grid lg:grid-cols-[0.95fr_1.05fr] gap-8 lg:gap-12 items-start">
+        <section className="hidden lg:block cai-slide-up">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700 mb-4 cai-slide-up cai-delay-1">
+            Área do candidato
+          </p>
+          <h1 className="font-['Manrope'] text-4xl font-extrabold leading-tight tracking-tight text-slate-950 mb-5 cai-slide-up cai-delay-2">
+            Crie sua conta e entre no ritmo da aprovação.
+          </h1>
+          <p className="text-base leading-7 text-slate-600 max-w-xl mb-8 cai-slide-up cai-delay-3">
+            O cadastro já reúne pagamento, comprovante e acesso ao painel, sem te jogar em um fluxo confuso.
+          </p>
+
+          <div className="grid gap-3 max-w-xl">
+            {[
+              ['Cadastro em um passo', 'Você paga por PIX, envia o comprovante e já deixa o acesso encaminhado.'],
+              ['Estudo no foco certo', 'Entre para gerar questões por cargo, banca e matéria com mais direção.'],
+              ['Tudo organizado', 'Seus simulados ficam salvos para retomar quando quiser.'],
+            ].map(([title, text], index) => (
+              <div key={title} className="flex gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] cai-soft-pop cai-interactive">
+                <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-sm animate-pulse-glow">
+                  {index + 1}
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold tracking-normal">{title}</h2>
+                  <p className="text-sm text-slate-500 mt-1 leading-relaxed">{text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] cai-soft-pop">
+            <p className="text-sm font-bold text-slate-900">Precisa falar com a gente?</p>
+            <div className="mt-3 space-y-2 text-sm text-slate-600">
+              <p>
+                Email: <a href="mailto:castroomath7@gmail.com" className="font-semibold text-blue-700 hover:text-blue-800">castroomath7@gmail.com</a>
               </p>
-              <h2
-                className="text-3xl font-bold text-brand-ink tracking-tight leading-[1.1]"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {activeTab === 'login' ? 'Continue seus estudos.' : 'Comece em 30 segundos.'}
-              </h2>
-              <p className="text-sm text-brand-ink-2 mt-3 leading-relaxed">
-                {activeTab === 'login'
-                  ? 'Sua biblioteca, anotações e flashcards estão esperando.'
-                  : '3 dias de acesso total. Sem cartão. Cancele quando quiser.'}
+              <p>
+                WhatsApp: <a href="https://wa.me/5535920004855" className="font-semibold text-blue-700 hover:text-blue-800">35 92000-4855</a>
               </p>
             </div>
+          </div>
+        </section>
 
-            {/* Tab toggle — pill style, different from template underline */}
-            <div className="inline-flex bg-slate-100 p-1 rounded-lg mb-8">
-              {(['login', 'signup'] as const).map((tab) => (
+        <section className="bg-white border border-slate-200 rounded-lg shadow-[0_16px_48px_-28px_rgba(15,23,42,0.35)] overflow-hidden cai-slide-up cai-delay-2">
+          <div className="border-b border-slate-200 bg-slate-50 px-5 sm:px-7 py-5 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-600 mb-2">
+                Acesso seguro
+              </p>
+              <h2 className="text-2xl font-extrabold text-slate-950 tracking-tight">{titleByMode[mode]}</h2>
+              <p className="text-sm text-slate-500 mt-2 leading-relaxed">{subtitleByMode[mode]}</p>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-blue-700 text-white flex items-center justify-center shrink-0 animate-float">
+              <BookOpenCheck className="h-5 w-5" />
+            </div>
+          </div>
+
+          {(mode === 'entrar' || mode === 'criar') && (
+            <div className="px-5 sm:px-7 pt-5">
+              <div className="grid grid-cols-2 rounded-lg bg-slate-100 p-1">
                 <button
-                  key={tab}
                   type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`relative px-5 py-1.5 text-[13px] font-semibold rounded-md transition-colors ${
-                    activeTab === tab
-                      ? 'text-brand-ink'
-                      : 'text-slate-500 hover:text-brand-ink-2'
+                  onClick={() => switchMode('entrar')}
+                  className={`h-9 rounded-md text-sm font-bold transition-colors ${
+                    mode === 'entrar' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  {activeTab === tab && (
-                    <motion.div
-                      layoutId="auth-tab-pill"
-                      className="absolute inset-0 bg-white rounded-md shadow-sm"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative">{tab === 'login' ? 'Entrar' : 'Criar conta'}</span>
+                  Entrar
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => switchMode('criar')}
+                  className={`h-9 rounded-md text-sm font-bold transition-colors ${
+                    mode === 'criar' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Criar conta
+                </button>
+              </div>
             </div>
+          )}
 
-            <AnimatePresence mode="wait">
-              {activeTab === 'login' ? (
-                <motion.div
-                  key="login"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-5"
-                >
-                  {migrationWarning && (
-                    <div className="pmed-alert pmed-alert--danger">
-                      <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
-                      <div>
-                        <strong>Senha não reconhecida</strong>
-                        <span className="block text-xs leading-relaxed mb-2">
-                          Recentemente migramos a plataforma para uma nova infraestrutura. Se você já tinha conta, sua senha anterior não foi transferida. Clique em <strong>"Esqueci minha senha"</strong> para criar uma nova.
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => { setShowForgotPassword(true); setForgotEmail(loginEmail); }}
-                          className="text-xs font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
-                        >
-                          Redefinir minha senha agora
-                        </button>
-                      </div>
+          <div className="p-5 sm:p-7">
+            {mode === 'entrar' && (
+              <form onSubmit={handleLogin} className="space-y-4 cai-fade-in">
+                <Field id="login-email" label="Email" icon={Mail}>
+                  <Input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" required disabled={loading} className="pl-10 h-11" />
+                </Field>
+                <PasswordField
+                  id="login-password"
+                  label="Senha"
+                  value={password}
+                  onChange={setPassword}
+                  showPassword={showPassword}
+                  onToggle={() => setShowPassword((show) => !show)}
+                  disabled={loading}
+                />
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-blue-700 hover:bg-blue-800 font-bold">
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Entrando...</> : 'Entrar'}
+                </Button>
+                <button type="button" onClick={() => switchMode('recuperar')} className="w-full text-center text-sm font-semibold text-blue-700 hover:text-blue-800">
+                  Esqueci minha senha
+                </button>
+              </form>
+            )}
+
+            {mode === 'criar' && (
+              <form onSubmit={handleSignup} className="space-y-5 cai-fade-in">
+                <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Pagamento via PIX</p>
+                      <h3 className="mt-1 text-lg font-extrabold text-slate-950">Libere seu acesso com {PIX_PAYMENT.amountLabel}</h3>
                     </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 text-sm font-medium border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    onClick={handleGoogleSignIn}
-                    disabled={loading}
-                  >
-                    <svg className="mr-2.5 h-4 w-4" viewBox="0 0 24 24">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                    Continuar com Google
-                  </Button>
-
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400 uppercase tracking-wider">
-                    <div className="flex-1 h-px bg-slate-200" />
-                    <span className="font-semibold">ou</span>
-                    <div className="flex-1 h-px bg-slate-200" />
+                    <div className="hidden sm:flex h-10 w-10 rounded-lg bg-white text-blue-700 items-center justify-center border border-blue-100">
+                      <CreditCard className="h-5 w-5" />
+                    </div>
                   </div>
 
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="login-email" className="text-xs font-semibold text-brand-ink-2">Email</Label>
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        required
-                        disabled={loading}
-                        className="h-11 bg-slate-50 border-slate-200 focus-visible:border-brand-primary focus-visible:ring-brand-primary/15"
-                      />
+                  <div className="grid sm:grid-cols-[168px_1fr] gap-4 items-center">
+                    <div className="mx-auto rounded-lg bg-white p-3 border border-blue-100 shadow-sm">
+                      <QRCodeSVG value={PIX_PAYMENT.payload} size={144} level="M" includeMargin />
                     </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="login-password" className="text-xs font-semibold text-brand-ink-2">Senha</Label>
-                        <button
-                          type="button"
-                          onClick={() => setShowForgotPassword(true)}
-                          className="text-[11px] font-semibold text-brand-primary hover:text-brand-primary-dark transition-colors"
-                        >
-                          Esqueci minha senha
-                        </button>
-                      </div>
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        required
-                        disabled={loading}
-                        className="h-11 bg-slate-50 border-slate-200 focus-visible:border-brand-primary focus-visible:ring-brand-primary/15"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full h-11 font-semibold bg-brand-primary-dark hover:bg-brand-primary-darker"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Entrando...</>
-                      ) : (
-                        'Entrar'
-                      )}
-                    </Button>
-                  </form>
 
-                  <AnimatePresence>
-                    {showForgotPassword && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-                          <div>
-                            <p className="text-sm font-semibold text-brand-ink">Recuperar senha</p>
-                            <p className="text-xs text-brand-ink-2 mt-0.5">Enviaremos um link para redefinir.</p>
-                          </div>
-                          <form onSubmit={handleForgotPassword} className="space-y-3">
-                            <Input
-                              type="email"
-                              placeholder="seu@email.com"
-                              value={forgotEmail}
-                              onChange={(e) => setForgotEmail(e.target.value)}
-                              required
-                              disabled={forgotLoading}
-                              className="h-9 bg-white"
-                            />
-                            <div className="flex gap-2 justify-end">
-                              <Button type="button" variant="ghost" size="sm" onClick={() => setShowForgotPassword(false)}>
-                                Cancelar
-                              </Button>
-                              <Button
-                                type="submit"
-                                size="sm"
-                                disabled={forgotLoading}
-                                className="bg-brand-primary-dark hover:bg-brand-primary-darker"
-                              >
-                                {forgotLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar link'}
-                              </Button>
-                            </div>
-                          </form>
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-white/80 bg-white p-3">
+                        <p className="text-xs font-semibold text-slate-500">Recebedor</p>
+                        <p className="text-sm font-bold text-slate-900">{PIX_PAYMENT.beneficiary}</p>
+                      </div>
+                      <div className="rounded-lg border border-white/80 bg-white p-3">
+                        <p className="text-xs font-semibold text-slate-500">Cidade</p>
+                        <p className="text-sm font-bold text-slate-900">{PIX_PAYMENT.city}</p>
+                      </div>
+                      <div className="rounded-lg border border-white/80 bg-white p-3">
+                        <p className="text-xs font-semibold text-slate-500">PIX copia e cola</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-600 break-all">{PIX_PAYMENT.payload}</p>
+                      </div>
+                      <Button type="button" variant="outline" className="w-full h-10 font-semibold" onClick={handleCopyPix}>
+                        {pixCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {pixCopied ? 'Código copiado' : 'Copiar código PIX'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-dashed border-blue-200 bg-white p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-slate-900">
+                      <Upload className="h-4 w-4 text-blue-700" />
+                      <span className="text-sm font-bold">Anexe o comprovante</span>
+                    </div>
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
+                      disabled={loading}
+                      className="cursor-pointer file:mr-3 file:rounded-md file:border file:border-slate-200 file:px-3 file:py-1.5 file:text-sm file:font-semibold"
+                    />
+                    <p className="text-xs text-slate-500">
+                      Aceitamos imagem ou PDF do pagamento.
+                    </p>
+                    {proofFile && (
+                      <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 border border-slate-200 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{proofFile.name}</p>
+                          <p className="text-xs text-slate-500">{formatFileSize(proofFile.size)}</p>
                         </div>
-                      </motion.div>
+                        <QrCode className="h-4 w-4 shrink-0 text-blue-700" />
+                      </div>
                     )}
-                  </AnimatePresence>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="signup"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-5"
-                >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 text-sm font-medium border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    onClick={handleGoogleSignIn}
-                    disabled={loading}
-                  >
-                    <svg className="mr-2.5 h-4 w-4" viewBox="0 0 24 24">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                    Criar conta com Google
-                  </Button>
-
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400 uppercase tracking-wider">
-                    <div className="flex-1 h-px bg-slate-200" />
-                    <span className="font-semibold">ou</span>
-                    <div className="flex-1 h-px bg-slate-200" />
                   </div>
+                </div>
 
-                  <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="signup-name" className="text-xs font-semibold text-brand-ink-2">Nome completo</Label>
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="Como seus preceptores te chamam"
-                        value={signupName}
-                        onChange={(e) => setSignupName(e.target.value)}
-                        required
-                        disabled={loading}
-                        className="h-11 bg-slate-50 border-slate-200 focus-visible:border-brand-primary focus-visible:ring-brand-primary/15"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="signup-email" className="text-xs font-semibold text-brand-ink-2">Email</Label>
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={signupEmail}
-                        onChange={(e) => setSignupEmail(e.target.value)}
-                        required
-                        disabled={loading}
-                        className="h-11 bg-slate-50 border-slate-200 focus-visible:border-brand-primary focus-visible:ring-brand-primary/15"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-password" className="text-xs font-semibold text-brand-ink-2">Senha</Label>
-                        <Input
-                          id="signup-password"
-                          type="password"
-                          placeholder="6+ caracteres"
-                          value={signupPassword}
-                          onChange={(e) => setSignupPassword(e.target.value)}
-                          required
-                          disabled={loading}
-                          className="h-11 bg-slate-50 border-slate-200 focus-visible:border-brand-primary focus-visible:ring-brand-primary/15"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-confirm" className="text-xs font-semibold text-brand-ink-2">Confirmar</Label>
-                        <Input
-                          id="signup-confirm"
-                          type="password"
-                          placeholder="Repita"
-                          value={signupConfirmPassword}
-                          onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                          required
-                          disabled={loading}
-                          className="h-11 bg-slate-50 border-slate-200 focus-visible:border-brand-primary focus-visible:ring-brand-primary/15"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full h-11 font-semibold bg-brand-primary-dark hover:bg-brand-primary-darker"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando conta...</>
-                      ) : (
-                        'Criar conta e começar'
-                      )}
-                    </Button>
-                  </form>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                <Field id="signup-name" label="Nome completo" icon={UserRound}>
+                  <Input id="signup-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Seu nome" required disabled={loading} className="pl-10 h-11" />
+                </Field>
+                <Field id="signup-email" label="Email" icon={Mail}>
+                  <Input id="signup-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" required disabled={loading} className="pl-10 h-11" />
+                </Field>
+                <PasswordField
+                  id="signup-password"
+                  label="Senha"
+                  value={password}
+                  onChange={setPassword}
+                  showPassword={showPassword}
+                  onToggle={() => setShowPassword((show) => !show)}
+                  disabled={loading}
+                />
+                <PasswordField
+                  id="signup-confirm"
+                  label="Confirmar senha"
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  showPassword={showPassword}
+                  onToggle={() => setShowPassword((show) => !show)}
+                  disabled={loading}
+                />
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-blue-700 hover:bg-blue-800 font-bold">
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : 'Criar conta e enviar comprovante'}
+                </Button>
+              </form>
+            )}
 
-            <p className="text-center text-[11px] text-slate-400 mt-8 leading-relaxed">
-              Ao continuar, você concorda com nossos{' '}
-              <a href="/termos" className="text-slate-500 hover:text-brand-primary underline underline-offset-2">termos de uso</a>
-              {' '}e{' '}
-              <a href="/privacidade" className="text-slate-500 hover:text-brand-primary underline underline-offset-2">política de privacidade</a>.
-            </p>
-          </motion.div>
-        </div>
+            {mode === 'recuperar' && (
+              <form onSubmit={handleRecover} className="space-y-4 cai-fade-in">
+                <Field id="recover-email" label="Email cadastrado" icon={Mail}>
+                  <Input id="recover-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" required disabled={loading} className="pl-10 h-11" />
+                </Field>
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-blue-700 hover:bg-blue-800 font-bold">
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : 'Enviar link de recuperação'}
+                </Button>
+                <button type="button" onClick={() => switchMode('entrar')} className="w-full text-center text-sm font-semibold text-slate-500 hover:text-slate-700">
+                  Voltar para o login
+                </button>
+              </form>
+            )}
+
+            {mode === 'redefinir' && (
+              <form onSubmit={handleUpdatePassword} className="space-y-4 cai-fade-in">
+                <PasswordField
+                  id="new-password"
+                  label="Nova senha"
+                  value={password}
+                  onChange={setPassword}
+                  showPassword={showPassword}
+                  onToggle={() => setShowPassword((show) => !show)}
+                  disabled={loading}
+                />
+                <PasswordField
+                  id="new-password-confirm"
+                  label="Confirmar nova senha"
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  showPassword={showPassword}
+                  onToggle={() => setShowPassword((show) => !show)}
+                  disabled={loading}
+                />
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-blue-700 hover:bg-blue-800 font-bold">
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : 'Salvar nova senha'}
+                </Button>
+              </form>
+            )}
+
+            <div className="mt-6 flex items-start gap-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 cai-soft-pop cai-delay-3">
+              <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                Cadastro simples, pagamento por PIX e comprovante guardado no seu perfil para conferência.
+              </p>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
 };
+
+function Field({ id, label, icon: Icon, children }: { id: string; label: string; icon: LucideIcon; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs font-bold text-slate-700">
+        {label}
+      </Label>
+      <div className="relative">
+        <Icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  showPassword,
+  onToggle,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  showPassword: boolean;
+  onToggle: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs font-bold text-slate-700">
+        {label}
+      </Label>
+      <div className="relative">
+        <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Input
+          id={id}
+          type={showPassword ? 'text' : 'password'}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Mínimo de 6 caracteres"
+          required
+          disabled={disabled}
+          className="h-11 pl-10 pr-11"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+        >
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default Auth;

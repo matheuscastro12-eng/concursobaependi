@@ -156,13 +156,13 @@ const richComponents: Record<string, React.ComponentType<any>> = {
     const icon = getHeadingIcon(text);
     return (
       <h2 className="flex items-center gap-3 mb-4 mt-10 text-xl font-bold text-[#191c1d] first:mt-0 font-['Manrope']">
-        <MI name={icon} className="text-[#006D5B] text-[24px]" />
+        <MI name={icon} className="text-[#2563EB] text-[24px]" />
         {children}
       </h2>
     );
   },
   h3: ({ children }: any) => (
-    <h3 className="mb-3 mt-6 text-sm font-bold text-[#006D5B]">
+    <h3 className="mb-3 mt-6 text-sm font-bold text-[#2563EB]">
       {children}
     </h3>
   ),
@@ -180,7 +180,7 @@ const richComponents: Record<string, React.ComponentType<any>> = {
   ),
   li: ({ children }: any) => (
     <li className="leading-relaxed flex items-start gap-2.5 text-[15px]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#006D5B] mt-2.5 shrink-0" />
+      <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB] mt-2.5 shrink-0" />
       <span className="flex-1">{children}</span>
     </li>
   ),
@@ -191,8 +191,8 @@ const richComponents: Record<string, React.ComponentType<any>> = {
     <em className="italic text-[#5f6368]">{children}</em>
   ),
   blockquote: ({ children }: any) => (
-    <div className="my-5 flex items-start gap-3 bg-[#e8f5f0] border-l-4 border-[#006D5B] rounded-r-xl py-4 px-5">
-      <MI name="info" fill className="text-[#006D5B] text-[20px] mt-0.5" />
+    <div className="my-5 flex items-start gap-3 bg-[#EFF6FF] border-l-4 border-[#2563EB] rounded-r-xl py-4 px-5">
+      <MI name="info" fill className="text-[#2563EB] text-[20px] mt-0.5" />
       <div className="text-sm text-[#3e4945] [&>p]:mb-0 [&>p]:italic [&>p]:leading-relaxed flex-1">{children}</div>
     </div>
   ),
@@ -205,7 +205,7 @@ const richComponents: Record<string, React.ComponentType<any>> = {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded bg-[#006D5B]/10 text-[#005344] text-[0.85em] font-semibold hover:bg-[#006D5B] hover:text-white transition-colors no-underline align-baseline"
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded bg-[#2563EB]/10 text-[#1D4ED8] text-[0.85em] font-semibold hover:bg-[#2563EB] hover:text-white transition-colors no-underline align-baseline"
           title={`Abrir no PubMed: ${text}`}
         >
           <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>open_in_new</span>
@@ -214,13 +214,13 @@ const richComponents: Record<string, React.ComponentType<any>> = {
       );
     }
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#006D5B] underline underline-offset-2 hover:text-[#005344]">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#2563EB] underline underline-offset-2 hover:text-[#1D4ED8]">
         {children}
       </a>
     );
   },
   code: ({ children }: any) => (
-    <code className="rounded-md bg-[#f3f4f5] px-2 py-1 text-sm font-mono text-[#006D5B]">{children}</code>
+    <code className="rounded-md bg-[#f3f4f5] px-2 py-1 text-sm font-mono text-[#2563EB]">{children}</code>
   ),
   hr: () => <hr className="my-10 border-slate-200/60" />,
   table: ({ children }: any) => (

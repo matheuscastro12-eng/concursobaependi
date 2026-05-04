@@ -42,7 +42,7 @@ function buildExtractionPrompt(numAlternativas: number, isText: boolean): string
   const sourceLabel = isText
     ? "o texto extraido pagina-a-pagina de uma prova"
     : "um PDF de prova";
-  return `Voce recebe ${sourceLabel} de medicina (residencia, ENAMED, prova de faculdade, ou similar).
+  return `Voce recebe ${sourceLabel} de concurso publico (municipal, estadual, federal ou similar).
 Sua tarefa: extrair TODAS as questoes de multipla escolha presentes.
 
 REGRAS CRITICAS:
@@ -178,7 +178,7 @@ async function generateJustificativaIA(
   ).join("\n");
 
   const prompt =
-    `Questao de prova de medicina:\n\n${enunciado}\n\n${altLetras}\n\nGabarito oficial: ${gabarito}\n\nProduza uma justificativa academica que explique por que a alternativa ${gabarito} esta correta e por que cada uma das outras esta errada. Use linguagem medica precisa, cite mecanismos fisiopatologicos e dados de evidencia quando relevante. NAO invente referencias com pagina/capitulo. Maximo 4 paragrafos densos. Comece direto pelo conteudo, sem cabecalhos.`;
+    `Questao de concurso publico:\n\n${enunciado}\n\n${altLetras}\n\nGabarito oficial: ${gabarito}\n\nProduza uma justificativa objetiva que explique por que a alternativa ${gabarito} esta correta e por que cada uma das outras esta errada. Cite o fundamento legal, doutrinario ou conceitual pertinente. NAO invente referencias com pagina/capitulo. Maximo 4 paragrafos densos. Comece direto pelo conteudo, sem cabecalhos.`;
 
   const response = await fetch(url, {
     method: "POST",
@@ -188,7 +188,7 @@ async function generateJustificativaIA(
         parts: [
           {
             text:
-              "Voce e um Preceptor Academico de Medicina. Justifique respostas de questoes com rigor cientifico e clareza didatica.",
+              "Voce e um professor especialista em concursos publicos. Justifique respostas de questoes com rigor juridico/conceitual e clareza didatica.",
           },
         ],
       },
