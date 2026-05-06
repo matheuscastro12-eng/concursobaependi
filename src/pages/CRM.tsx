@@ -18,7 +18,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import TrafficMetrics from '@/components/crm/TrafficMetrics';
-import QuestionBankPanel from '@/components/crm/QuestionBankPanel';
 import logoColor from '@/assets/logo-concursos.svg';
 
 type ProfileRow = {
@@ -303,7 +302,6 @@ const CRM = () => {
 
       <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8 space-y-8">
         <TrafficMetrics />
-        <QuestionBankPanel />
 
         <section className="grid gap-4 md:grid-cols-4">
           {[
