@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Sparkles, Briefcase, Clock, DollarSign, Award } from 'lucide-react';
 import { getCargoBySlug, getMateriaById, editalInfo, NIVEL_LABEL } from '@/data/baependi';
+import { useTrainingCargo } from '@/hooks/useTrainingCargo';
 import logoColor from '@/assets/logo-concursos.svg';
 
 const CATEGORIA_LABEL: Record<string, string> = {
@@ -21,8 +23,13 @@ const CargoDetalhe = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const cargo = slug ? getCargoBySlug(slug) : undefined;
+  const { setSelectedCargoSlug } = useTrainingCargo();
 
   if (!cargo) return <Navigate to="/" replace />;
+
+  useEffect(() => {
+    setSelectedCargoSlug(cargo.slug);
+  }, [cargo.slug, setSelectedCargoSlug]);
 
   const handleGerar = (materiaNome: string) => {
     const params = new URLSearchParams({
@@ -44,15 +51,14 @@ const CargoDetalhe = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 cai-animated-grid">
-      {/* Top bar */}
       <header className="border-b border-slate-200/70 bg-white/80 backdrop-blur-xl sticky top-0 z-30 cai-fade-in">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-700 transition-colors cai-interactive"
           >
             <ArrowLeft className="w-4 h-4" />
-            Todos os cargos
+            Voltar ao dashboard
           </button>
           <div className="flex items-center gap-2">
             <img src={logoColor} alt="ConcursosAI" className="h-7 w-7" />
@@ -62,7 +68,6 @@ const CargoDetalhe = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        {/* Cargo header */}
         <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-[0_1px_2px_rgba(15,23,42,0.04)] mb-8 cai-slide-up">
           <p className="inline-flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.22em] text-blue-700 mb-3 cai-slide-up cai-delay-1">
             <span className="w-6 h-px bg-amber-500" />
@@ -89,7 +94,6 @@ const CargoDetalhe = () => {
           </button>
         </section>
 
-        {/* Matérias */}
         <section className="cai-slide-up cai-delay-2">
           <div className="flex items-baseline justify-between mb-4">
             <h2 className="font-['Manrope'] font-bold text-lg text-slate-900">
@@ -143,7 +147,6 @@ const CargoDetalhe = () => {
           </div>
         </section>
 
-        {/* Footer dica */}
         <div className="mt-10 rounded-2xl border border-amber-200/60 bg-amber-50/40 p-5 cai-slide-up cai-delay-3">
           <p className="text-sm font-bold text-amber-900 mb-1">Dica</p>
           <p className="text-sm text-slate-600 leading-relaxed">

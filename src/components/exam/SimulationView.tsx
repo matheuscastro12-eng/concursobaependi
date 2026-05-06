@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import PostSimulationFeedback from '@/components/exam/PostSimulationFeedback';
+import QuestionDoubt from '@/components/exam/QuestionDoubt';
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Trophy, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface ParsedQuestion {
@@ -21,6 +22,8 @@ interface SimulationViewProps {
   onExit: () => void;
   isGenerating?: boolean;
   isComplete?: boolean;
+  banca?: string;
+  cargo?: string;
 }
 
 function parseQuestions(markdown: string): ParsedQuestion[] {
@@ -78,7 +81,7 @@ function parseQuestions(markdown: string): ParsedQuestion[] {
   return questions;
 }
 
-const SimulationView = ({ resultado, onExit, isGenerating = false, isComplete = true }: SimulationViewProps) => {
+const SimulationView = ({ resultado, onExit, isGenerating = false, isComplete = true, banca, cargo }: SimulationViewProps) => {
   const navigate = useNavigate();
   const questions = useMemo(() => parseQuestions(resultado), [resultado]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -356,6 +359,20 @@ const SimulationView = ({ resultado, onExit, isGenerating = false, isComplete = 
                       </div>
                     )}
                   </div>
+
+                  {/* Tutor IA — Q&A contextual da questão atual */}
+                  <QuestionDoubt
+                    questionId={`${currentQ.number}-${currentIndex}`}
+                    context={{
+                      enunciado: currentQ.enunciado,
+                      alternativas: currentQ.alternatives,
+                      correctAnswer: currentQ.correctAnswer,
+                      explanation: currentQ.explanation,
+                      tema: currentQ.tema,
+                      banca,
+                      cargo,
+                    }}
+                  />
                   {currentIndex < totalQuestions - 1 && (
                     <button
                       onClick={() => setCurrentIndex(currentIndex + 1)}

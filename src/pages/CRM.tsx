@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
+import TrafficMetrics from '@/components/crm/TrafficMetrics';
+import QuestionBankPanel from '@/components/crm/QuestionBankPanel';
 import logoColor from '@/assets/logo-concursos.svg';
 
 type ProfileRow = {
@@ -272,11 +274,12 @@ const CRM = () => {
         <div className="max-w-[1440px] mx-auto h-16 px-4 sm:px-6 lg:px-10 xl:px-12 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-700 transition-colors"
+              title="Sair do CRM e ir para o dashboard"
             >
               <ArrowLeft className="h-4 w-4" />
-              Voltar
+              Voltar ao app
             </button>
             <div className="h-8 w-px bg-slate-200" />
             <div className="flex items-center gap-2">
@@ -299,6 +302,9 @@ const CRM = () => {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8 space-y-8">
+        <TrafficMetrics />
+        <QuestionBankPanel />
+
         <section className="grid gap-4 md:grid-cols-4">
           {[
             ['Usuários', String(stats.total), Mail],

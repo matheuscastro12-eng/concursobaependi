@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { saveExamProgress, clearExamProgress } from '@/lib/savedGeneratedExams';
 
 export type DifficultyLevel = 'basico' | 'avancado';
 
@@ -13,7 +14,13 @@ export interface ExamConfig {
 }
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
+const GEMINI_DIRECT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
+const GEMINI_PROXY = '/api/gemini';
+
+// Em dev, se houver VITE_GOOGLE_AI_API_KEY no .env.local, chama o Gemini direto.
+// Em produção (Vercel), VITE_GOOGLE_AI_API_KEY não existe e a chamada vai pro proxy
+// serverless /api/gemini que esconde a key server-side.
+const useProxy = !import.meta.env.VITE_GOOGLE_AI_API_KEY;
 
 const buildBancaStyleBlock = (banca: string): string => {
   if (!/inepam/i.test(banca)) {
@@ -113,7 +120,15 @@ export const useExamGenerator = () => {
   const [isComplete, setIsComplete] = useState(false);
   const [currentConfig, setCurrentConfig] = useState<ExamConfig | null>(null);
 
-  const generate = useCallback(async (conteudo: string, config: ExamConfig) => {
+  const generate = useCallback(async (
+    conteudo: string,
+    config: ExamConfig,
+    // Opcional. Se passado, usado como base do cacheKey de progresso parcial
+    // (deve bater com o `tema` usado em findSavedGeneratedExam pra restauração
+    // funcionar). Se omitido, cai no `conteudo`.
+    persistKey?: string,
+  ) => {
+    const cacheBase = (persistKey ?? conteudo).trim();
     if (!conteudo.trim()) {
       toast({
         title: 'Tema obrigatório',
@@ -124,10 +139,12 @@ export const useExamGenerator = () => {
     }
 
     const apiKey = import.meta.env.VITE_GOOGLE_AI_API_KEY;
-    if (!apiKey) {
+    // Em produção (proxy ativo) não precisa de key no front.
+    // Em dev, se a key não estiver, alerta.
+    if (!useProxy && !apiKey) {
       toast({
         title: 'Chave de API ausente',
-        description: 'Configure VITE_GOOGLE_AI_API_KEY no arquivo .env.local e reinicie o servidor.',
+        description: 'Configure VITE_GOOGLE_AI_API_KEY no .env.local ou implemente /api/gemini.',
         variant: 'destructive',
       });
       return null;
@@ -147,7 +164,8 @@ export const useExamGenerator = () => {
       // Thinking budget proporcional à dificuldade — Nível Superior pede mais raciocínio
       const thinkingBudget = config.nivel === 'avancado' ? 8192 : 4096;
 
-      const response = await fetch(`${GEMINI_ENDPOINT}&key=${apiKey}`, {
+      const url = useProxy ? GEMINI_PROXY : `${GEMINI_DIRECT}&key=${apiKey}`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -166,7 +184,14 @@ export const useExamGenerator = () => {
         let msg = `HTTP ${response.status}`;
         try {
           const parsed = JSON.parse(errBody);
-          msg = parsed?.error?.message ?? msg;
+          // O proxy /api/gemini devolve {error: 'gemini_overloaded', message: ...}
+          // quando esgotam os retries — exibe mensagem curta e amigável.
+          if (parsed?.error === 'gemini_overloaded') {
+            msg = parsed.message
+              || 'A IA está com alta demanda agora. Tente de novo em alguns segundos.';
+          } else {
+            msg = parsed?.error?.message ?? parsed?.message ?? msg;
+          }
         } catch {
           if (errBody) msg = errBody.slice(0, 200);
         }
@@ -178,6 +203,19 @@ export const useExamGenerator = () => {
       let fullText = '';
       let started = false;
       let buffer = '';
+      // Throttle do save no localStorage — escreve no máximo a cada 800ms
+      // (ou imediatamente quando passar de 1500 chars desde o último save).
+      let lastSaveAt = 0;
+      let lastSaveLen = 0;
+      const trySaveProgress = () => {
+        const now = Date.now();
+        const lenDelta = fullText.length - lastSaveLen;
+        if (now - lastSaveAt > 800 || lenDelta > 1500) {
+          saveExamProgress(cacheBase, config, fullText);
+          lastSaveAt = now;
+          lastSaveLen = fullText.length;
+        }
+      };
 
       if (reader) {
         while (true) {
@@ -212,10 +250,18 @@ export const useExamGenerator = () => {
               // ignora chunks parciais
             }
           }
+
+          trySaveProgress();
         }
       }
 
       setIsComplete(true);
+      // Save final + clear do progresso parcial (saveGeneratedExam no Exam.tsx
+      // persiste o resultado completo no cache global).
+      saveExamProgress(cacheBase, config, fullText);
+      // Pequena janela pro Exam.tsx persistir antes de limpar — evita perder
+      // a referência se o usuário sair da aba imediatamente após o término.
+      setTimeout(() => clearExamProgress(cacheBase, config), 5000);
       return fullText;
     } catch (error) {
       toast({

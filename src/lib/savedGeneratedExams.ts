@@ -2,7 +2,11 @@ import type { ExamConfig } from '@/hooks/useExamGenerator';
 import { supabase } from '@/integrations/supabase/client';
 
 const STORAGE_KEY = 'concursosai.generatedExams.v1';
+const STORAGE_KEY_PROGRESS = 'concursosai.examProgress.v1';
 const MAX_SAVED_EXAMS = 80;
+// Progresso parcial fica disponível por 24h. Depois disso, descartamos e o usuário
+// gera de novo (provavelmente abandonou).
+const PROGRESS_TTL_MS = 24 * 60 * 60 * 1000;
 
 export interface SavedGeneratedExam {
   id: string;
@@ -166,3 +170,77 @@ export const saveGeneratedExam = async (tema: string, config: ExamConfig, result
 };
 
 export const listSavedGeneratedExams = () => readSavedExams();
+
+// ─────────────────────────────────────────────────────────────────────────
+// PROGRESSO PARCIAL (durante o stream)
+// Salva no localStorage a cada N caracteres recebidos, pra sobreviver a:
+//   - troca de aba do navegador
+//   - F5 / fechar e abrir a aba
+//   - navegação dentro do app (voltar pra outra rota e voltar)
+// Quando a geração completa, o saveGeneratedExam acima persiste tudo
+// e o clearExamProgress limpa o registro parcial.
+// ─────────────────────────────────────────────────────────────────────────
+
+interface ExamProgressEntry {
+  cacheKey: string;
+  tema: string;
+  banca: string;
+  cargo: string;
+  config: SavedGeneratedExam['config'];
+  resultado: string;
+  updatedAt: number;
+}
+
+const readProgress = (): ExamProgressEntry[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY_PROGRESS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // GC: remove entradas vencidas
+    const now = Date.now();
+    return parsed.filter((e: ExamProgressEntry) => now - e.updatedAt < PROGRESS_TTL_MS);
+  } catch {
+    return [];
+  }
+};
+
+const writeProgress = (items: ExamProgressEntry[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    // Limita a 5 sessões parciais simultâneas pra não inflar o storage.
+    window.localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(items.slice(0, 5)));
+  } catch {
+    // sem espaço — ignora silenciosamente.
+  }
+};
+
+export const saveExamProgress = (tema: string, config: ExamConfig, resultado: string) => {
+  const cacheKey = buildGeneratedExamCacheKey(tema, config);
+  const entry: ExamProgressEntry = {
+    cacheKey,
+    tema: tema.trim(),
+    banca: config.banca?.trim() || 'INEPAM',
+    cargo: config.cargo?.trim() || '',
+    config: {
+      quantidade: config.quantidade,
+      nivel: config.nivel,
+      numAlternativas: config.numAlternativas ?? 5,
+    },
+    resultado,
+    updatedAt: Date.now(),
+  };
+  const existing = readProgress().filter((e) => e.cacheKey !== cacheKey);
+  writeProgress([entry, ...existing]);
+};
+
+export const loadExamProgress = (tema: string, config: ExamConfig): ExamProgressEntry | null => {
+  const cacheKey = buildGeneratedExamCacheKey(tema, config);
+  return readProgress().find((e) => e.cacheKey === cacheKey) ?? null;
+};
+
+export const clearExamProgress = (tema: string, config: ExamConfig) => {
+  const cacheKey = buildGeneratedExamCacheKey(tema, config);
+  writeProgress(readProgress().filter((e) => e.cacheKey !== cacheKey));
+};

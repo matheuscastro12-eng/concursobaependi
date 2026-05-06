@@ -8,7 +8,8 @@ import ExamConfigPanel from '@/components/exam/ExamConfigPanel';
 import SimulationView from '@/components/exam/SimulationView';
 import ContextChat from '@/components/ContextChat';
 import logoColor from '@/assets/logo-concursos.svg';
-import { findSavedGeneratedExam, saveGeneratedExam } from '@/lib/savedGeneratedExams';
+import { findSavedGeneratedExam, saveGeneratedExam, loadExamProgress, clearExamProgress } from '@/lib/savedGeneratedExams';
+import { tryPickFromBank, markQuestionsSeen } from '@/lib/questionBank';
 
 function hasParseableQuestion(text: string): boolean {
   const blocks = text.split(/(?=##\s*Questão\s+\d+)/i);
@@ -72,6 +73,43 @@ const Exam = () => {
     }
   }, [hasStartedReceiving, resultado, showSimulation]);
 
+  // Restauração automática: se o usuário saiu da aba/recarregou no meio de uma
+  // geração, ao voltar pra essa rota com os mesmos parâmetros recuperamos o
+  // progresso salvo no localStorage e mostramos as questões que já tinham
+  // chegado. Útil tanto pra geração completa quanto pra parcial.
+  useEffect(() => {
+    if (examStarted) return;
+    const trimmedTema = temaFromUrl.trim();
+    if (!trimmedTema) return;
+
+    let cancelled = false;
+    (async () => {
+      // 1) Tenta cache COMPLETO (Supabase + localStorage)
+      const saved = await findSavedGeneratedExam(trimmedTema, config);
+      if (cancelled) return;
+      if (saved && hasParseableQuestion(saved.resultado)) {
+        setExamStarted(true);
+        loadSaved(saved.resultado, config);
+        return;
+      }
+      // 2) Tenta progresso PARCIAL (só localStorage, durante stream interrompido)
+      const partial = loadExamProgress(trimmedTema, config);
+      if (partial && hasParseableQuestion(partial.resultado)) {
+        setExamStarted(true);
+        loadSaved(partial.resultado, config);
+        toast({
+          title: 'Simulado restaurado',
+          description: 'Recuperamos o que já tinha sido gerado antes de você sair.',
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // só no mount — config no momento inicial reflete defaults + URL
+
   const handleGenerate = async () => {
     if (!tema.trim()) {
       toast({ title: 'Tema obrigatório', description: 'Informe o tema ou matéria das questões.', variant: 'destructive' });
@@ -84,6 +122,24 @@ const Exam = () => {
       config.cargo ? `Cargo: ${config.cargo}` : '',
     ].filter(Boolean).join('\n');
 
+    // 1) Tenta o BANCO DE QUESTÕES (instantâneo, sem IA).
+    // Match exato de tema → matéria. Se houver questões suficientes,
+    // monta o simulado direto do banco.
+    const fromBank = await tryPickFromBank(tema, config);
+    if (fromBank) {
+      setShowSimulation(false);
+      setExamStarted(true);
+      loadSaved(fromBank.markdown, config);
+      // Marca como vistas pra anti-repetição em sessões futuras.
+      markQuestionsSeen(fromBank.questionIds);
+      toast({
+        title: 'Simulado carregado do banco',
+        description: 'Questões do banco oficial · sem custo de IA.',
+      });
+      return;
+    }
+
+    // 2) Tenta o cache de simulados completos (Supabase + localStorage).
     const saved = await findSavedGeneratedExam(tema, config);
     if (saved) {
       setShowSimulation(false);
@@ -96,9 +152,10 @@ const Exam = () => {
       return;
     }
 
+    // 3) Fallback: chama o Gemini ao vivo.
     setShowSimulation(false);
     setExamStarted(true);
-    const generated = await generate(conteudo, config);
+    const generated = await generate(conteudo, config, tema);
     if (generated?.trim()) {
       await saveGeneratedExam(tema, config, generated);
       toast({
@@ -154,6 +211,8 @@ const Exam = () => {
                     onExit={handleBackToMenu}
                     isGenerating={generating}
                     isComplete={isComplete}
+                    banca={config.banca}
+                    cargo={config.cargo}
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-6 max-w-md mx-auto cai-fade-in">

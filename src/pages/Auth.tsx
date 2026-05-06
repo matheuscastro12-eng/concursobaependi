@@ -24,7 +24,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { PIX_PAYMENT, submitPixPaymentProof } from '@/lib/paymentSubmissions';
+import {
+  PIX_PAYMENT,
+  submitPixPaymentProof,
+  validateCoupon,
+  createStripeCheckoutSession,
+  type CouponValidation,
+} from '@/lib/paymentSubmissions';
 import logoColor from '@/assets/logo-concursos.svg';
 
 type AuthMode = 'entrar' | 'criar' | 'recuperar' | 'redefinir';
@@ -68,6 +74,50 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
+
+  // ── Pagamento ─────────────────────────────────────────────────
+  // Default = Stripe (mensal): qualquer aluno paga via Stripe ao se cadastrar.
+  // Se aplicar cupom HELENICE → vira 'pix' e mostra QR + upload de comprovante.
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'stripe'>('stripe');
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) {
+      toast({ title: 'Digite o cupom', description: 'Informe o código fornecido pela sua turma.', variant: 'destructive' });
+      return;
+    }
+    setValidatingCoupon(true);
+    const result = await validateCoupon(code);
+    setValidatingCoupon(false);
+    setCouponValidation(result);
+    if (!result.valid) {
+      toast({
+        title: result.reason === 'exhausted' ? 'Cupom esgotado' : 'Cupom inválido',
+        description: result.reason === 'exhausted'
+          ? 'Esse cupom já atingiu o limite de alunos. Você ainda pode assinar o plano mensal.'
+          : 'Confira com sua turma o código correto.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setPaymentMethod('pix');
+    toast({
+      title: 'Cupom aplicado',
+      description: result.config?.label ?? 'Pagamento por PIX liberado.',
+    });
+  };
+
+  const handleResetPaymentMethod = () => {
+    setPaymentMethod('stripe');
+    setCouponValidation(null);
+    setCouponInput('');
+    setProofFile(null);
+    setCouponOpen(false);
+  };
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -118,7 +168,7 @@ const Auth = () => {
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!proofFile) {
+    if (paymentMethod === 'pix' && !proofFile) {
       toast({
         title: 'Anexe o comprovante',
         description: 'Selecione o arquivo do pagamento para concluir o cadastro.',
@@ -146,39 +196,80 @@ const Auth = () => {
       return;
     }
 
-    if (!session || !createdUser) {
+    // Sem createdUser, não há como prosseguir.
+    if (!createdUser) {
       setLoading(false);
       toast({
         title: 'Conta criada',
-        description: 'Ative o acesso automático no Supabase para enviar o comprovante logo após o cadastro.',
+        description: 'Faça login pra continuar com o pagamento.',
       });
       switchMode('entrar');
       return;
     }
 
-    try {
-      await submitPixPaymentProof({
-        userId: createdUser.id,
-        email,
-        fullName: name,
-        file: proofFile,
-      });
-    } catch (uploadError) {
+    // ── Stripe NÃO precisa de session: o checkout é criado server-side
+    // com user_id+email e o webhook libera o acesso após o pagamento.
+    // Se cair aqui sem session, ainda assim dispara o redirect.
+    if (paymentMethod === 'stripe') {
+      try {
+        const checkoutUrl = await createStripeCheckoutSession({
+          userId: createdUser.id,
+          email,
+        });
+        window.location.assign(checkoutUrl);
+        return;
+      } catch (stripeError) {
+        setLoading(false);
+        toast({
+          title: 'Não conseguimos abrir o pagamento',
+          description: stripeError instanceof Error ? stripeError.message : 'Tente novamente em instantes.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    // ── PIX precisa de session (upload pro storage RLS por auth.uid())
+    if (paymentMethod === 'pix' && !session) {
       setLoading(false);
       toast({
-        title: 'Conta criada, mas faltou o comprovante',
-        description: uploadError instanceof Error ? uploadError.message : 'Tente novamente em instantes.',
-        variant: 'destructive',
+        title: 'Conta criada',
+        description: 'Entre com seu email e senha pra anexar o comprovante.',
       });
+      switchMode('entrar');
+      return;
+    }
+
+    // ── PIX (cupom HELENICE) ────────────────────────────────────────
+    if (paymentMethod === 'pix' && proofFile) {
+      try {
+        await submitPixPaymentProof({
+          userId: createdUser.id,
+          email,
+          fullName: name,
+          file: proofFile,
+          couponCode: couponValidation?.config?.code ?? null,
+        });
+      } catch (uploadError) {
+        setLoading(false);
+        toast({
+          title: 'Conta criada, mas faltou o comprovante',
+          description: uploadError instanceof Error ? uploadError.message : 'Tente novamente em instantes.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setLoading(false);
+      toast({
+        title: 'Conta criada',
+        description: 'Recebemos seu comprovante. Vamos liberar o acesso após a conferência.',
+      });
+      navigate(next, { replace: true });
       return;
     }
 
     setLoading(false);
-    toast({
-      title: 'Conta criada',
-      description: 'Recebemos seu comprovante. Vamos liberar o acesso após a conferência.',
-    });
-    navigate(next, { replace: true });
   };
 
   const handleRecover = async (event: React.FormEvent) => {
@@ -357,6 +448,82 @@ const Auth = () => {
 
             {mode === 'criar' && (
               <form onSubmit={handleSignup} className="space-y-5 cai-fade-in">
+                {/* ── Plano padrão (Stripe mensal) — só informativo ──── */}
+                {paymentMethod === 'stripe' && (
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-blue-700 mb-1">
+                          Plano de acesso
+                        </p>
+                        <h3 className="text-base font-extrabold text-slate-950">R$ 40/mês · Stripe</h3>
+                        <p className="mt-1 text-sm text-slate-600 leading-relaxed">
+                          Cobrança no cartão. Cancele quando quiser. Após criar a conta, você é
+                          redirecionado para o pagamento.
+                        </p>
+                      </div>
+                      <CreditCard className="h-5 w-5 text-blue-700 mt-0.5 shrink-0" />
+                    </div>
+
+                    {/* Toggle discreto pra cupom */}
+                    {!couponOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => setCouponOpen(true)}
+                        className="mt-3 text-xs font-semibold text-blue-700 hover:text-blue-800 underline-offset-2 hover:underline"
+                      >
+                        Tem cupom da turma? Clique aqui
+                      </button>
+                    ) : (
+                      <div className="mt-3 pt-3 border-t border-blue-100 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                          <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-amber-700">
+                            Cupom de turma
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            type="text"
+                            placeholder="Digite o cupom"
+                            value={couponInput}
+                            onChange={(e) => setCouponInput(e.target.value)}
+                            disabled={validatingCoupon || loading}
+                            className="h-10 uppercase tracking-wide"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={validatingCoupon || loading || !couponInput.trim()}
+                            className="h-10 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold whitespace-nowrap"
+                          >
+                            {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Aviso quando cupom foi aplicado ────────────────── */}
+                {paymentMethod === 'pix' && (
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs">
+                    <span className="text-amber-900 inline-flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                      Cupom <strong>{couponValidation?.config?.code}</strong> aplicado · pagamento por PIX
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleResetPaymentMethod}
+                      className="text-blue-700 hover:text-blue-800 font-semibold"
+                    >
+                      Voltar ao plano mensal
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Bloco PIX (visível só após cupom válido) ─────── */}
+                {paymentMethod === 'pix' && (
                 <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -419,6 +586,7 @@ const Auth = () => {
                     )}
                   </div>
                 </div>
+                )}
 
                 <Field id="signup-name" label="Nome completo" icon={UserRound}>
                   <Input id="signup-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Seu nome" required disabled={loading} className="pl-10 h-11" />

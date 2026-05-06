@@ -4,11 +4,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import PageSkeleton from "./components/PageSkeleton";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
 import AccessRoute from "./components/auth/AccessRoute";
 import { AuthProvider } from "./contexts/AuthContext";
+import { useVisitorTracking } from "./hooks/useVisitorTracking";
 
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
@@ -23,6 +25,12 @@ const queryClient = new QueryClient();
 
 const LazyFallback = () => <PageSkeleton variant="menu" />;
 
+// Plug useVisitorTracking — precisa estar DENTRO de BrowserRouter + AuthProvider.
+const TrackedRoutes = ({ children }: { children: React.ReactNode }) => {
+  useVisitorTracking();
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -30,6 +38,7 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter>
+          <TrackedRoutes>
           <Suspense fallback={<LazyFallback />}>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -45,9 +54,9 @@ const App = () => (
               <Route
                 path="/dashboard"
                 element={
-                  <AccessRoute>
+                  <ProtectedRoute>
                     <Dashboard />
-                  </AccessRoute>
+                  </ProtectedRoute>
                 }
               />
               <Route path="/auth" element={<Auth />} />
@@ -62,8 +71,10 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </TrackedRoutes>
         </BrowserRouter>
       </AuthProvider>
+      <Analytics />
     </TooltipProvider>
   </QueryClientProvider>
 );
