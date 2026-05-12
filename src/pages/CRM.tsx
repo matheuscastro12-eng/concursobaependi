@@ -265,30 +265,83 @@ const CRM = () => {
   };
 
   const updateAccess = async (targetUserId: string, active: boolean) => {
+    // Mantido por retrocompat — agora trata como toggle do Baependi (Stripe-like).
+    return updateAccessForConcurso(targetUserId, 'baependi', active);
+  };
+
+  const updateAccessForConcurso = async (
+    targetUserId: string,
+    concursoSlug: 'baependi' | 'alagoa',
+    active: boolean,
+  ) => {
     if (!user) return;
-    setBusyKey(`access:${targetUserId}`);
+    setBusyKey(`access:${targetUserId}:${concursoSlug}`);
 
-    const { error } = await supabase.from('subscriptions').upsert(
-      {
-        user_id: targetUserId,
-        status: active ? 'active' : 'inactive',
-        plan_type: 'manual',
-        granted_by: user.id,
-        access_expires_at: null,
-      },
-      { onConflict: 'user_id' },
-    );
-
-    setBusyKey(null);
-
-    if (error) {
-      toast({ title: 'Não conseguimos alterar o acesso', description: error.message, variant: 'destructive' });
-      return;
+    if (concursoSlug === 'baependi') {
+      const { error } = await supabase.from('subscriptions').upsert(
+        {
+          user_id: targetUserId,
+          status: active ? 'active' : 'inactive',
+          plan_type: 'manual',
+          granted_by: user.id,
+          access_expires_at: null,
+        },
+        { onConflict: 'user_id' },
+      );
+      setBusyKey(null);
+      if (error) {
+        toast({ title: 'Falha ao alterar acesso Baependi', description: error.message, variant: 'destructive' });
+        return;
+      }
+    } else {
+      // Alagoa: grava um pix_payments "manual" confirmado/rejeitado e
+      // sincroniza has_lifetime_access.
+      if (active) {
+        const upsertRes = await (supabase as any).from('pix_payments').insert({
+          user_id: targetUserId,
+          concurso_slug: 'alagoa',
+          valor_centavos: 0,
+          status: 'confirmed',
+          comprovante_url: 'manual_grant',
+          confirmed_at: new Date().toISOString(),
+          confirmed_by: user.id,
+        });
+        if (upsertRes.error) {
+          setBusyKey(null);
+          toast({ title: 'Falha ao liberar Alagoa', description: upsertRes.error.message, variant: 'destructive' });
+          return;
+        }
+        // Profile flag (retrocompat de useSubscription)
+        await (supabase as any)
+          .from('profiles')
+          .update({ has_lifetime_access: true })
+          .eq('id', targetUserId);
+      } else {
+        // Revogar = marca todos os pix_payments confirmados de Alagoa como rejeitados
+        const revokeRes = await (supabase as any)
+          .from('pix_payments')
+          .update({ status: 'rejected' })
+          .eq('user_id', targetUserId)
+          .eq('concurso_slug', 'alagoa')
+          .eq('status', 'confirmed');
+        if (revokeRes.error) {
+          setBusyKey(null);
+          toast({ title: 'Falha ao revogar Alagoa', description: revokeRes.error.message, variant: 'destructive' });
+          return;
+        }
+        // Reset lifetime flag se o slug original do user era alagoa
+        await (supabase as any)
+          .from('profiles')
+          .update({ has_lifetime_access: false })
+          .eq('id', targetUserId)
+          .eq('concurso_slug', 'alagoa');
+      }
+      setBusyKey(null);
     }
 
     toast({
-      title: active ? 'Acesso liberado' : 'Acesso revogado',
-      description: active ? 'O usuário já pode usar a área protegida.' : 'O usuário perdeu o acesso liberado manualmente.',
+      title: active ? `Acesso liberado · ${concursoSlug === 'alagoa' ? 'Alagoa' : 'Baependi'}` : `Acesso revogado · ${concursoSlug === 'alagoa' ? 'Alagoa' : 'Baependi'}`,
+      description: active ? 'O usuário já pode usar a área protegida desse concurso.' : 'O usuário perdeu o acesso liberado manualmente.',
     });
     load(false);
   };
@@ -655,32 +708,48 @@ const CRM = () => {
                     )}
                   </div>
 
-                  <aside className="xl:w-[300px] shrink-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <aside className="xl:w-[320px] shrink-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                     <div>
                       <p className="text-sm font-bold text-slate-900">Acesso do aluno</p>
                       <p className="text-xs text-slate-500 mt-1">
-                        Libere ou revogue o acesso manualmente.
+                        Libere ou revogue acesso por concurso.
                       </p>
                     </div>
 
-                    <div className="grid gap-2">
-                      <button
-                        onClick={() => updateAccess(entry.userId, true)}
-                        disabled={accessBusy || entry.hasAccess}
-                        className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800 transition-colors disabled:opacity-60"
-                      >
-                        {accessBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
-                        Conceder acesso
-                      </button>
-                      <button
-                        onClick={() => updateAccess(entry.userId, false)}
-                        disabled={accessBusy || !entry.hasAccess}
-                        className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:text-rose-700 hover:border-rose-200 transition-colors disabled:opacity-60"
-                      >
-                        <UserX className="h-4 w-4" />
-                        Revogar acesso
-                      </button>
-                    </div>
+                    {(['baependi', 'alagoa'] as const).map((slug) => {
+                      const slugLabel = slug === 'alagoa' ? 'Alagoa' : 'Baependi';
+                      const hasThis = entry.accessSlugs.includes(slug);
+                      const busy = busyKey === `access:${entry.userId}:${slug}`;
+                      const tone = slug === 'alagoa' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-blue-700 hover:bg-blue-800';
+                      return (
+                        <div key={slug} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold text-slate-900">{slugLabel}</p>
+                            <span className={`text-[10px] font-bold uppercase tracking-[0.12em] ${hasThis ? 'text-emerald-700' : 'text-slate-400'}`}>
+                              {hasThis ? 'Liberado' : 'Sem acesso'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => updateAccessForConcurso(entry.userId, slug, true)}
+                              disabled={busy || hasThis}
+                              className={`inline-flex items-center justify-center gap-1.5 h-9 px-2 rounded-lg ${tone} text-white text-xs font-semibold transition-colors disabled:opacity-50`}
+                            >
+                              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserCheck className="h-3.5 w-3.5" />}
+                              Liberar
+                            </button>
+                            <button
+                              onClick={() => updateAccessForConcurso(entry.userId, slug, false)}
+                              disabled={busy || !hasThis}
+                              className="inline-flex items-center justify-center gap-1.5 h-9 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:text-rose-700 hover:border-rose-200 transition-colors disabled:opacity-50"
+                            >
+                              <UserX className="h-3.5 w-3.5" />
+                              Revogar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
 
                     <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500 space-y-1">
                       <p><strong className="text-slate-700">Status atual:</strong> {entry.subscriptionStatus}</p>
