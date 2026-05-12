@@ -583,4 +583,8 @@ export const concurso: Concurso = {
   inscricoes: 'inepam.org.br',
   cargos,
   materias,
+  paymentModel: 'stripe_mensal',
+  precoLabel: 'R$ 40/mês',
+  formaPagamento: 'Stripe · cartão (cancele quando quiser)',
+  valorCentavos: 4000,
 };

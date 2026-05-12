@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (params: { email: string; password: string; name: string }) => Promise<{ error: Error | null; session: Session | null; user: User | null }>;
+  signUp: (params: { email: string; password: string; name: string; concursoSlug?: string }) => Promise<{ error: Error | null; session: Session | null; user: User | null }>;
   signIn: (params: { email: string; password: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<{ error: Error | null }>;
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       session,
       loading,
-      signUp: async ({ email, password, name }) => {
+      signUp: async ({ email, password, name, concursoSlug }) => {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -70,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             data: {
               full_name: name,
               product: 'concursosai',
+              concurso_slug: concursoSlug ?? 'baependi',
             },
           },
         });

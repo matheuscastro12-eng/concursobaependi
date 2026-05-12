@@ -21,6 +21,7 @@ const Exam = lazy(() => import("./pages/Exam"));
 const Auth = lazy(() => import("./pages/Auth"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const PaymentAlagoa = lazy(() => import("./pages/PaymentAlagoa"));
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,14 @@ const App = () => (
               {/* Por concurso */}
               <Route path="/c/:concursoSlug" element={<Home />} />
               <Route path="/c/:concursoSlug/cargos/:slug" element={<CargoDetalhe />} />
+              <Route
+                path="/c/alagoa/pagamento"
+                element={
+                  <ProtectedRoute>
+                    <PaymentAlagoa />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/c/:concursoSlug/exam"
                 element={

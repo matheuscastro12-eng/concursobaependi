@@ -265,4 +265,8 @@ export const concurso: Concurso = {
   inscricoesPeriodo: '15/abr a 19/mai/2026',
   cargos,
   materias,
+  paymentModel: 'pix_unico',
+  precoLabel: 'R$ 60 · pagamento único',
+  formaPagamento: 'PIX · pagamento único (acesso vitalício)',
+  valorCentavos: 6000,
 };

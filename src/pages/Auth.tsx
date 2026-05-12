@@ -32,6 +32,7 @@ import {
   type CouponValidation,
 } from '@/lib/paymentSubmissions';
 import logoColor from '@/assets/logo-concursos.svg';
+import { getConcursoBySlug, DEFAULT_CONCURSO_SLUG } from '@/data/concursos';
 
 type AuthMode = 'entrar' | 'criar' | 'recuperar' | 'redefinir';
 
@@ -62,6 +63,12 @@ const Auth = () => {
 
   const next = useMemo(() => getRedirectTarget(searchParams.get('next')), [searchParams]);
   const initialMode = (searchParams.get('mode') as AuthMode | null) ?? 'entrar';
+  const concursoSlugFromUrl = searchParams.get('concurso');
+  const concursoForSignup = useMemo(() => {
+    const slug = concursoSlugFromUrl ?? DEFAULT_CONCURSO_SLUG;
+    return getConcursoBySlug(slug) ?? getConcursoBySlug(DEFAULT_CONCURSO_SLUG)!;
+  }, [concursoSlugFromUrl]);
+  const isAlagoa = concursoForSignup.slug === 'alagoa';
   const [mode, setMode] = useState<AuthMode>(
     ['entrar', 'criar', 'recuperar', 'redefinir'].includes(initialMode) ? initialMode : 'entrar',
   );
@@ -188,7 +195,12 @@ const Auth = () => {
     }
 
     setLoading(true);
-    const { error, session, user: createdUser } = await signUp({ email, password, name });
+    const { error, session, user: createdUser } = await signUp({
+      email,
+      password,
+      name,
+      concursoSlug: concursoForSignup.slug,
+    });
 
     if (error) {
       setLoading(false);
@@ -204,6 +216,21 @@ const Auth = () => {
         description: 'Faça login pra continuar com o pagamento.',
       });
       switchMode('entrar');
+      return;
+    }
+
+    // ── Alagoa: PIX único R$60. Redireciona pra página de pagamento dedicada.
+    if (isAlagoa) {
+      setLoading(false);
+      if (!session) {
+        toast({
+          title: 'Conta criada',
+          description: 'Entre com seu email e senha pra concluir o pagamento PIX.',
+        });
+        switchMode('entrar');
+        return;
+      }
+      navigate('/c/alagoa/pagamento', { replace: true });
       return;
     }
 
@@ -448,8 +475,44 @@ const Auth = () => {
 
             {mode === 'criar' && (
               <form onSubmit={handleSignup} className="space-y-5 cai-fade-in">
+                {/* ── Badge do concurso escolhido ──────────────────── */}
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 flex items-center gap-3">
+                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    isAlagoa ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    <BookOpenCheck className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                      Você está se inscrevendo para
+                    </p>
+                    <p className="text-sm font-extrabold text-slate-950 truncate">
+                      {concursoForSignup.nome}
+                    </p>
+                    {concursoForSignup.precoLabel && (
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {concursoForSignup.precoLabel} · {concursoForSignup.formaPagamento}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Bloco Alagoa: PIX único R$60 ──────────────────── */}
+                {isAlagoa && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-amber-700 mb-1">
+                      Pagamento Alagoa
+                    </p>
+                    <h3 className="text-base font-extrabold text-slate-950">R$ 60 · PIX único</h3>
+                    <p className="mt-1 text-sm text-slate-600 leading-relaxed">
+                      Acesso vitalício. Após criar a conta, você é redirecionado pra página de
+                      pagamento PIX com QR code e upload de comprovante.
+                    </p>
+                  </div>
+                )}
+
                 {/* ── Plano padrão (Stripe mensal) — só informativo ──── */}
-                {paymentMethod === 'stripe' && (
+                {!isAlagoa && paymentMethod === 'stripe' && (
                   <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -506,7 +569,7 @@ const Auth = () => {
                 )}
 
                 {/* ── Aviso quando cupom foi aplicado ────────────────── */}
-                {paymentMethod === 'pix' && (
+                {!isAlagoa && paymentMethod === 'pix' && (
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs">
                     <span className="text-amber-900 inline-flex items-center gap-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-amber-600" />
@@ -523,7 +586,7 @@ const Auth = () => {
                 )}
 
                 {/* ── Bloco PIX (visível só após cupom válido) ─────── */}
-                {paymentMethod === 'pix' && (
+                {!isAlagoa && paymentMethod === 'pix' && (
                 <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -613,7 +676,13 @@ const Auth = () => {
                   disabled={loading}
                 />
                 <Button type="submit" disabled={loading} className="w-full h-11 bg-blue-700 hover:bg-blue-800 font-bold">
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : 'Criar conta e enviar comprovante'}
+                  {loading ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</>
+                  ) : isAlagoa ? (
+                    'Criar conta e ir para pagamento PIX'
+                  ) : (
+                    'Criar conta e enviar comprovante'
+                  )}
                 </Button>
               </form>
             )}

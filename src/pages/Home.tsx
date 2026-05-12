@@ -56,6 +56,12 @@ const Home = () => {
   const { hasAccess } = useSubscription();
   const { concurso, slug: concursoSlug } = useActiveConcurso();
   const cargos = concurso.cargos;
+  const isAlagoa = concursoSlug === 'alagoa';
+  const precoLabelCurto = isAlagoa ? 'R$ 60 · pagamento único' : 'R$ 40/mês';
+  const acessoLabel = isAlagoa ? 'Acesso vitalício · PIX' : 'Acesso mensal';
+  const ctaPrincipal = isAlagoa ? 'Pagar R$ 60 (PIX único)' : 'Começar por R$ 40/mês';
+  const ctaSecundario = isAlagoa ? 'Assinar com PIX' : 'Assinar agora';
+  const ctaAssinar = isAlagoa ? 'Pagar R$ 60 (PIX)' : 'Assinar por R$ 40/mês';
   const [search, setSearch] = useState('');
   const [activeNivel, setActiveNivel] = useState<Nivel | 'todos'>('todos');
 
@@ -111,7 +117,7 @@ const Home = () => {
               </div>
             ) : (
               <button
-                onClick={() => navigate('/auth?mode=criar')}
+                onClick={() => navigate(`/auth?mode=criar&concurso=${concursoSlug}`)}
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 text-xs font-bold text-white transition-colors hover:bg-blue-700 cai-interactive"
               >
                 <LogIn className="h-3.5 w-3.5" />
@@ -143,11 +149,14 @@ const Home = () => {
                 <div className="mb-6 inline-flex flex-wrap items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm cai-slide-up cai-delay-3">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-300">
-                      Acesso mensal
+                      {acessoLabel}
                     </p>
                     <p className="font-['Manrope'] text-3xl font-extrabold tracking-[-0.03em] text-white">
-                      R$ 40
-                      <span className="text-base font-bold text-white/72">/mês</span>
+                      {isAlagoa ? (
+                        <>R$ 60<span className="text-base font-bold text-white/72"> · único</span></>
+                      ) : (
+                        <>R$ 40<span className="text-base font-bold text-white/72">/mês</span></>
+                      )}
                     </p>
                   </div>
                   <div className="hidden h-10 w-px bg-white/12 sm:block" />
@@ -175,10 +184,10 @@ const Home = () => {
 
                 <div className="flex flex-col gap-3 cai-slide-up cai-delay-5 sm:flex-row">
                   <button
-                    onClick={() => navigate('/auth?mode=criar')}
+                    onClick={() => navigate(`/auth?mode=criar&concurso=${concursoSlug}`)}
                     className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 text-sm font-extrabold text-slate-950 transition-colors hover:bg-amber-300 cai-interactive"
                   >
-                    Começar por R$ 40/mês
+                    {ctaPrincipal}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                   <button
@@ -284,11 +293,14 @@ const Home = () => {
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.2em] text-blue-700">
-                    Assinatura mensal
+                    {isAlagoa ? 'Pagamento único' : 'Assinatura mensal'}
                   </p>
                   <h3 className="font-['Manrope'] text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-5xl">
-                    R$ 40
-                    <span className="ml-2 text-lg font-bold text-slate-500 sm:text-xl">/mês</span>
+                    {isAlagoa ? (
+                      <>R$ 60<span className="ml-2 text-lg font-bold text-slate-500 sm:text-xl">· PIX único</span></>
+                    ) : (
+                      <>R$ 40<span className="ml-2 text-lg font-bold text-slate-500 sm:text-xl">/mês</span></>
+                    )}
                   </h3>
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
                     Valor pensado para caber na rotina de estudo e entregar ganho prático logo
@@ -296,10 +308,10 @@ const Home = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => navigate('/auth?mode=criar')}
+                  onClick={() => navigate(`/auth?mode=criar&concurso=${concursoSlug}`)}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-800 cai-interactive"
                 >
-                  Assinar agora
+                  {ctaSecundario}
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -391,7 +403,7 @@ const Home = () => {
                 </p>
               </div>
               <button
-                onClick={() => navigate('/auth?mode=criar')}
+                onClick={() => navigate(`/auth?mode=criar&concurso=${concursoSlug}`)}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-800 cai-interactive"
               >
                 Criar conta para testar
@@ -412,15 +424,15 @@ const Home = () => {
                   Crie a conta e teste o fluxo completo em poucos minutos.
                 </h2>
                 <p className="mt-3 text-sm leading-relaxed text-white/78 sm:text-base">
-                  Entre por R$ 40/mês, escolha o cargo, gere o primeiro simulado e veja a
+                  Entre por {precoLabelCurto}, escolha o cargo, gere o primeiro simulado e veja a
                   diferença entre questão genérica e preparação orientada por banca.
                 </p>
               </div>
               <button
-                onClick={() => navigate('/auth?mode=criar')}
+                onClick={() => navigate(`/auth?mode=criar&concurso=${concursoSlug}`)}
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 text-sm font-extrabold text-slate-950 transition-colors hover:bg-amber-300 cai-interactive"
               >
-                Assinar por R$ 40/mês
+                {ctaAssinar}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>

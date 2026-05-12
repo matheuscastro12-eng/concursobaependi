@@ -43,6 +43,12 @@ export interface Concurso {
   materias: Record<string, Materia>;
   // Cor primária pra UI/branding (opcional). Default = azul do app.
   themeColor?: string;
+  // ── Pagamento ──
+  // 'stripe_mensal' = Stripe recorrente (Baependi). 'pix_unico' = PIX único vitalício (Alagoa).
+  paymentModel?: 'stripe_mensal' | 'pix_unico';
+  precoLabel?: string;        // "R$ 40/mês" | "R$ 60 · pagamento único"
+  formaPagamento?: string;    // "Stripe · cartão" | "PIX · pagamento único"
+  valorCentavos?: number;     // 4000 | 6000
 }
 
 export const NIVEL_LABEL: Record<Nivel, string> = {

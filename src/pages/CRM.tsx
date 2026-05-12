@@ -25,6 +25,20 @@ type ProfileRow = {
   email: string;
   full_name: string | null;
   created_at: string;
+  concurso_slug?: string | null;
+  has_lifetime_access?: boolean | null;
+};
+
+type PixPaymentRow = {
+  id: string;
+  user_id: string;
+  concurso_slug: string;
+  valor_centavos: number;
+  status: 'pending' | 'confirmed' | 'rejected' | 'expired';
+  comprovante_url: string | null;
+  confirmed_at: string | null;
+  confirmed_by: string | null;
+  created_at: string;
 };
 
 type SubscriptionRow = {
@@ -66,6 +80,8 @@ type CRMUser = {
   paymentStatus: string;
   latestPayment: PaymentRow | null;
   isAdmin: boolean;
+  concursoSlug: string;
+  hasLifetimeAccess: boolean;
 };
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -81,10 +97,12 @@ const CRM = () => {
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<'todos' | 'pending' | 'approved' | 'rejected'>('todos');
   const [accessFilter, setAccessFilter] = useState<'todos' | 'com-acesso' | 'sem-acesso'>('todos');
+  const [concursoFilter, setConcursoFilter] = useState<'todos' | 'baependi' | 'alagoa'>('todos');
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [pixPayments, setPixPayments] = useState<PixPaymentRow[]>([]);
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const load = async (showSpinner = true) => {
@@ -92,14 +110,15 @@ const CRM = () => {
     if (showSpinner) setLoading(true);
     else setRefreshing(true);
 
-    const [profilesRes, subscriptionsRes, paymentsRes, rolesRes] = await Promise.all([
-      supabase.from('profiles').select('user_id,email,full_name,created_at').order('created_at', { ascending: false }),
+    const [profilesRes, subscriptionsRes, paymentsRes, rolesRes, pixRes] = await Promise.all([
+      (supabase as any).from('profiles').select('user_id,email,full_name,created_at,concurso_slug,has_lifetime_access').order('created_at', { ascending: false }),
       supabase.from('subscriptions').select('user_id,status,plan_type,access_expires_at,updated_at'),
       supabase.from('payment_submissions').select('id,user_id,email,full_name,amount_cents,proof_storage_path,proof_file_name,status,review_notes,created_at,updated_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id,role'),
+      (supabase as any).from('pix_payments').select('id,user_id,concurso_slug,valor_centavos,status,comprovante_url,confirmed_at,confirmed_by,created_at').order('created_at', { ascending: false }),
     ]);
 
-    const firstError = profilesRes.error || subscriptionsRes.error || paymentsRes.error || rolesRes.error;
+    const firstError = profilesRes.error || subscriptionsRes.error || paymentsRes.error || rolesRes.error || pixRes.error;
 
     if (firstError) {
       toast({
@@ -112,6 +131,7 @@ const CRM = () => {
       setSubscriptions((subscriptionsRes.data as SubscriptionRow[]) ?? []);
       setPayments((paymentsRes.data as PaymentRow[]) ?? []);
       setRoles((rolesRes.data as RoleRow[]) ?? []);
+      setPixPayments((pixRes.data as PixPaymentRow[]) ?? []);
     }
 
     setLoading(false);
@@ -138,18 +158,24 @@ const CRM = () => {
       const latestPayment = latestPaymentMap.get(profile.user_id) ?? null;
       const hasAccess = subscription?.status === 'active';
 
+      const concursoSlug = profile.concurso_slug ?? 'baependi';
+      const hasLifetime = Boolean(profile.has_lifetime_access);
+      const computedAccess = hasAccess || hasLifetime;
+
       return {
         userId: profile.user_id,
         email: profile.email,
         fullName: profile.full_name || 'Sem nome',
         createdAt: profile.created_at ?? null,
-        hasAccess,
-        subscriptionStatus: subscription?.status ?? 'inactive',
-        planType: subscription?.plan_type ?? 'none',
+        hasAccess: computedAccess,
+        subscriptionStatus: subscription?.status ?? (hasLifetime ? 'active' : 'inactive'),
+        planType: subscription?.plan_type ?? (hasLifetime ? 'lifetime' : 'none'),
         accessExpiresAt: subscription?.access_expires_at ?? null,
         paymentStatus: latestPayment?.status ?? 'sem-comprovante',
         latestPayment,
         isAdmin: adminSet.has(profile.user_id),
+        concursoSlug,
+        hasLifetimeAccess: hasLifetime,
       };
     });
   }, [payments, profiles, roles, subscriptions]);
@@ -171,9 +197,12 @@ const CRM = () => {
         (accessFilter === 'com-acesso' && item.hasAccess) ||
         (accessFilter === 'sem-acesso' && !item.hasAccess);
 
-      return matchesSearch && matchesPayment && matchesAccess;
+      const matchesConcurso =
+        concursoFilter === 'todos' || item.concursoSlug === concursoFilter;
+
+      return matchesSearch && matchesPayment && matchesAccess && matchesConcurso;
     });
-  }, [accessFilter, crmUsers, paymentFilter, search]);
+  }, [accessFilter, concursoFilter, crmUsers, paymentFilter, search]);
 
   const stats = useMemo(() => {
     return {
@@ -238,6 +267,66 @@ const CRM = () => {
       description: active ? 'O usuário já pode usar a área protegida.' : 'O usuário perdeu o acesso liberado manualmente.',
     });
     load(false);
+  };
+
+  const updatePixStatus = async (payment: PixPaymentRow, status: 'confirmed' | 'rejected') => {
+    if (!user) return;
+    setBusyKey(`pix:${payment.id}`);
+
+    const updateRes = await (supabase as any)
+      .from('pix_payments')
+      .update({
+        status,
+        confirmed_at: status === 'confirmed' ? new Date().toISOString() : null,
+        confirmed_by: status === 'confirmed' ? user.id : null,
+      })
+      .eq('id', payment.id);
+
+    if (updateRes.error) {
+      setBusyKey(null);
+      toast({ title: 'Falha ao atualizar PIX', description: updateRes.error.message, variant: 'destructive' });
+      return;
+    }
+
+    // Se aprovou, libera acesso vitalício no profile
+    if (status === 'confirmed') {
+      const profileRes = await (supabase as any)
+        .from('profiles')
+        .update({ has_lifetime_access: true })
+        .eq('id', payment.user_id);
+      if (profileRes.error) {
+        toast({
+          title: 'PIX confirmado, mas profile falhou',
+          description: profileRes.error.message,
+          variant: 'destructive',
+        });
+      }
+    }
+
+    setBusyKey(null);
+    toast({
+      title: status === 'confirmed' ? 'PIX confirmado' : 'PIX rejeitado',
+      description: status === 'confirmed' ? 'Acesso vitalício liberado.' : 'Pagamento marcado como rejeitado.',
+    });
+    load(false);
+  };
+
+  const openPixComprovante = async (payment: PixPaymentRow) => {
+    if (!payment.comprovante_url) return;
+    setBusyKey(`pix-proof:${payment.id}`);
+    const { data, error } = await supabase.storage
+      .from('pix-comprovantes')
+      .createSignedUrl(payment.comprovante_url, 3600);
+    setBusyKey(null);
+    if (error || !data?.signedUrl) {
+      toast({
+        title: 'Não conseguimos abrir o comprovante',
+        description: error?.message ?? 'A URL assinada não foi gerada.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   };
 
   const openProof = async (payment: PaymentRow) => {
@@ -320,7 +409,89 @@ const CRM = () => {
           ))}
         </section>
 
+        {/* ── Pagamentos PIX pendentes (Alagoa) ───────────────────── */}
+        {pixPayments.some((p) => p.status === 'pending') && (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="mb-4 flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-amber-700" />
+              <h2 className="font-['Manrope'] text-lg font-extrabold text-slate-950">
+                Pagamentos PIX pendentes
+              </h2>
+              <span className="ml-2 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-bold">
+                {pixPayments.filter((p) => p.status === 'pending').length}
+              </span>
+            </div>
+            <div className="grid gap-3">
+              {pixPayments
+                .filter((p) => p.status === 'pending')
+                .map((payment) => {
+                  const userProfile = profiles.find((pr) => pr.user_id === payment.user_id);
+                  const busy = busyKey === `pix:${payment.id}` || busyKey === `pix-proof:${payment.id}`;
+                  return (
+                    <div key={payment.id} className="rounded-xl border border-amber-200 bg-white p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-extrabold text-slate-950">
+                              {userProfile?.full_name || 'Sem nome'}
+                            </p>
+                            <ConcursoBadge slug={payment.concurso_slug} />
+                          </div>
+                          <p className="text-xs text-slate-600 mt-0.5">{userProfile?.email ?? payment.user_id}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {currency.format(payment.valor_centavos / 100)} · enviado em {dateTime.format(new Date(payment.created_at))}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {payment.comprovante_url && (
+                            <button
+                              onClick={() => openPixComprovante(payment)}
+                              disabled={busy}
+                              className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:text-blue-700 hover:border-blue-200 transition-colors disabled:opacity-60"
+                            >
+                              {busyKey === `pix-proof:${payment.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
+                              Abrir comprovante
+                            </button>
+                          )}
+                          <button
+                            onClick={() => updatePixStatus(payment, 'confirmed')}
+                            disabled={busy}
+                            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                          >
+                            {busyKey === `pix:${payment.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                            Aprovar
+                          </button>
+                          <button
+                            onClick={() => updatePixStatus(payment, 'rejected')}
+                            disabled={busy}
+                            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition-colors disabled:opacity-60"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            Rejeitar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </section>
+        )}
+
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <div className="mb-3 inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+            {(['todos', 'baependi', 'alagoa'] as const).map((slug) => (
+              <button
+                key={slug}
+                onClick={() => setConcursoFilter(slug)}
+                className={`px-3.5 h-9 rounded-lg transition-all capitalize ${
+                  concursoFilter === slug ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {slug === 'todos' ? 'Todos concursos' : slug === 'baependi' ? 'Baependi' : 'Alagoa'}
+              </button>
+            ))}
+          </div>
           <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -389,6 +560,7 @@ const CRM = () => {
                             Admin
                           </span>
                         )}
+                        <ConcursoBadge slug={entry.concursoSlug} />
                       </div>
                       <p className="mt-1 text-sm text-slate-600">{entry.email}</p>
                     </div>
@@ -508,6 +680,19 @@ function labelPaymentStatus(status: string) {
   if (status === 'approved') return 'Aprovado';
   if (status === 'rejected') return 'Rejeitado';
   return 'Sem comprovante';
+}
+
+function ConcursoBadge({ slug }: { slug: string }) {
+  const isAlagoa = slug === 'alagoa';
+  const label = isAlagoa ? 'Alagoa' : 'Baependi';
+  const tone = isAlagoa
+    ? 'bg-amber-50 text-amber-700 border-amber-200'
+    : 'bg-blue-50 text-blue-700 border-blue-200';
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${tone}`}>
+      {label}
+    </span>
+  );
 }
 
 function StatusChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 'red' | 'slate' }) {
