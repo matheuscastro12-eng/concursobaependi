@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   BadgeCheck,
@@ -20,34 +20,50 @@ import {
   Target,
   TrendingUp,
 } from 'lucide-react';
-import { cargos, editalInfo, NIVEL_LABEL, type Nivel } from '@/data/baependi';
+import { NIVEL_LABEL, type Nivel } from '@/data/concursos';
+import { useActiveConcurso } from '@/hooks/useActiveConcurso';
 import logoColor from '@/assets/logo-concursos.svg';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useSubscription } from '@/hooks/useSubscription';
+import InteractiveQuestionPreview from '@/components/landing/InteractiveQuestionPreview';
+import SocialProofBanner from '@/components/landing/SocialProofBanner';
 
 const NIVEL_ICON: Record<Nivel, typeof Building2> = {
+  alfabetizado: Building2,
   fundamental: Building2,
   medio: Briefcase,
+  medio_tecnico: Briefcase,
   superior: GraduationCap,
+  superior_educacao: GraduationCap,
+};
+
+const shortLabel = (nivel: Nivel): string => {
+  switch (nivel) {
+    case 'alfabetizado': return 'Alfa.';
+    case 'fundamental': return 'Fund.';
+    case 'medio': return 'Médio';
+    case 'medio_tecnico': return 'Téc.';
+    case 'superior': return 'Superior';
+    case 'superior_educacao': return 'Sup. Edu.';
+  }
 };
 
 const Home = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, signOut } = useAuth();
   const { canAccessAdmin } = useAdmin();
-  const { hasAccess, loading: subscriptionLoading } = useSubscription();
+  const { hasAccess } = useSubscription();
+  const { concurso, slug: concursoSlug } = useActiveConcurso();
+  const cargos = concurso.cargos;
   const [search, setSearch] = useState('');
   const [activeNivel, setActiveNivel] = useState<Nivel | 'todos'>('todos');
 
-  useEffect(() => {
-    if (authLoading || subscriptionLoading) return;
-    if (!user) return;
-    const fromInternal = (location.state as { fromInternal?: boolean } | null)?.fromInternal;
-    if (fromInternal) return;
-    navigate(canAccessAdmin ? '/crm' : '/dashboard', { replace: true });
-  }, [authLoading, canAccessAdmin, location.state, navigate, subscriptionLoading, user]);
+  // Níveis disponíveis no concurso atual (mostra só os que aparecem)
+  const nivelOptions = useMemo(
+    () => Array.from(new Set(cargos.map((c) => c.nivel))) as Nivel[],
+    [cargos],
+  );
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase().trim();
@@ -56,7 +72,7 @@ const Home = () => {
       const matchesSearch = !term || cargo.nome.toLowerCase().includes(term);
       return matchesNivel && matchesSearch;
     });
-  }, [search, activeNivel]);
+  }, [search, activeNivel, cargos]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 cai-animated-grid">
@@ -176,11 +192,11 @@ const Home = () => {
                 <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-white/80 cai-slide-up cai-delay-5">
                   <span className="inline-flex items-center gap-1.5">
                     <Building2 className="h-4 w-4 text-amber-300" />
-                    Banca: <strong className="text-white">{editalInfo.banca}</strong>
+                    Banca: <strong className="text-white">{concurso.banca}</strong>
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-amber-300" />
-                    {editalInfo.municipio}/{editalInfo.uf}
+                    {concurso.municipio}/{concurso.uf}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <FileText className="h-4 w-4 text-amber-300" />
@@ -213,11 +229,21 @@ const Home = () => {
           </div>
         </section>
 
+        {/* Prova social: stats reais + selos institucionais */}
+        <section className="mx-auto mt-10 max-w-3xl px-4 sm:px-6 lg:mt-14 lg:px-10 xl:px-12">
+          <SocialProofBanner />
+        </section>
+
+        {/* Preview interativo: 3 questões reais respondíveis sem cadastro */}
+        <section className="mx-auto mt-6 max-w-3xl px-4 sm:px-6 lg:px-10 xl:px-12">
+          <InteractiveQuestionPreview concursoSlug={concursoSlug} />
+        </section>
+
         <section className="mx-auto mt-10 max-w-[1440px] px-4 sm:px-6 lg:mt-14 lg:px-10 xl:px-12">
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              ['57', 'cargos já organizados', BadgeCheck],
-              ['INEPAM', 'banca base calibrada', Target],
+              [String(cargos.length), 'cargos já organizados', BadgeCheck],
+              [concurso.banca, 'banca base calibrada', Target],
               ['Edital', 'virando treino prático', TrendingUp],
               ['Minutos', 'para começar a revisar', Clock3],
             ].map(([value, label, Icon]) => (
@@ -357,7 +383,7 @@ const Home = () => {
                   Edital em destaque
                 </p>
                 <h2 className="font-['Manrope'] text-3xl font-extrabold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  {editalInfo.numero} · {editalInfo.municipio}/{editalInfo.uf}
+                  {concurso.numeroEdital} · {concurso.municipio}/{concurso.uf}
                 </h2>
                 <p className="mt-3 text-base leading-relaxed text-slate-600">
                   Veja os cargos, entenda onde está sua vaga e comece a treinar com mais
@@ -427,14 +453,17 @@ const Home = () => {
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
               />
             </div>
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
-              {(['todos', 'fundamental', 'medio', 'superior'] as const).map((nivel) => {
+            <div className="inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+              {(['todos', ...nivelOptions] as const).map((nivel) => {
                 const active = activeNivel === nivel;
-                const label = nivel === 'todos' ? 'Todos' : NIVEL_LABEL[nivel].replace('Ensino ', '');
+                const label =
+                  nivel === 'todos'
+                    ? 'Todos'
+                    : NIVEL_LABEL[nivel as Nivel].replace('Ensino ', '');
                 return (
                   <button
                     key={nivel}
-                    onClick={() => setActiveNivel(nivel)}
+                    onClick={() => setActiveNivel(nivel as Nivel | 'todos')}
                     className={`h-9 rounded-lg px-3.5 transition-all ${
                       active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                     }`}
@@ -457,7 +486,7 @@ const Home = () => {
                 return (
                   <button
                     key={cargo.slug}
-                    onClick={() => navigate(`/cargos/${cargo.slug}`)}
+                    onClick={() => navigate(`/c/${concursoSlug}/cargos/${cargo.slug}`)}
                     className="group rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-blue-500/40 hover:shadow-[0_12px_32px_-12px_rgba(37,99,235,0.20)] cai-slide-up cai-interactive"
                   >
                     <div className="mb-3 flex items-start justify-between">
@@ -465,7 +494,7 @@ const Home = () => {
                         <Icon className="h-[18px] w-[18px] text-blue-700 transition-transform group-hover:-translate-y-0.5" />
                       </div>
                       <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 transition-colors group-hover:text-blue-600">
-                        {cargo.nivel === 'fundamental' ? 'Fund.' : cargo.nivel === 'medio' ? 'Médio' : 'Superior'}
+                        {shortLabel(cargo.nivel)}
                       </span>
                     </div>
                     <h3 className="mb-2 line-clamp-2 font-['Manrope'] text-[15px] font-bold leading-snug text-slate-900">
@@ -491,7 +520,7 @@ const Home = () => {
 
           <footer className="mt-16 border-t border-slate-200 pt-8 text-center">
             <p className="text-xs text-slate-400">
-              Concurso Público {editalInfo.numero} · {editalInfo.banca} · ConcursosAI
+              Concurso Público {concurso.numeroEdital} · {concurso.banca} · ConcursosAI
             </p>
           </footer>
         </section>

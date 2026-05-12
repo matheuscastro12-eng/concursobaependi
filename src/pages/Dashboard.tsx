@@ -13,8 +13,8 @@ import {
   Sparkles,
   Target,
 } from 'lucide-react';
-import { useState } from 'react';
-import { cargos, editalInfo } from '@/data/baependi';
+import { useEffect, useState } from 'react';
+import { listConcursos, DEFAULT_CONCURSO_SLUG, getConcursoBySlug } from '@/data/concursos';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -24,6 +24,8 @@ import { createStripeCheckoutSession } from '@/lib/paymentSubmissions';
 import { Loader2 } from 'lucide-react';
 import logoColor from '@/assets/logo-concursos.svg';
 
+const DASHBOARD_CONCURSO_KEY = 'cai:dashboard:activeConcurso';
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -32,6 +34,38 @@ const Dashboard = () => {
   const { selectedCargo, selectedCargoSlug, setSelectedCargoSlug } = useTrainingCargo();
   const { toast } = useToast();
   const [paying, setPaying] = useState(false);
+
+  const concursos = listConcursos();
+  const [activeConcursoSlug, setActiveConcursoSlug] = useState<string>(() => {
+    if (typeof window === 'undefined') return DEFAULT_CONCURSO_SLUG;
+    const stored = window.localStorage.getItem(DASHBOARD_CONCURSO_KEY);
+    return (stored && getConcursoBySlug(stored)?.slug) || DEFAULT_CONCURSO_SLUG;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(DASHBOARD_CONCURSO_KEY, activeConcursoSlug);
+  }, [activeConcursoSlug]);
+
+  const activeConcurso =
+    getConcursoBySlug(activeConcursoSlug) ?? getConcursoBySlug(DEFAULT_CONCURSO_SLUG)!;
+  const cargos = activeConcurso.cargos;
+  const editalInfo = {
+    banca: activeConcurso.banca,
+    numero: activeConcurso.numeroEdital,
+    municipio: activeConcurso.municipio,
+    uf: activeConcurso.uf,
+  };
+
+  // Se o cargo persistido não existir no concurso ativo, cai pro primeiro
+  // cargo do concurso. Mantém o estado sempre consistente com a lista visível.
+  const visibleCargo = cargos.find((c) => c.slug === selectedCargoSlug) ?? cargos[0];
+  useEffect(() => {
+    if (visibleCargo && visibleCargo.slug !== selectedCargoSlug) {
+      setSelectedCargoSlug(visibleCargo.slug);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConcursoSlug]);
+  const displayCargo = visibleCargo ?? selectedCargo;
 
   const handlePay = async () => {
     if (!user?.email) return;
@@ -54,13 +88,34 @@ const Dashboard = () => {
   }, [user]);
 
   const cargoHighlights = useMemo(
-    () => cargos.filter((cargo) => cargo.slug !== selectedCargo.slug).slice(0, 6),
-    [selectedCargo.slug],
+    () => cargos.filter((cargo) => cargo.slug !== displayCargo.slug).slice(0, 6),
+    [displayCargo.slug],
   );
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 pt-2 flex items-center justify-center">
+          <div className="inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+            {concursos.map((c) => {
+              const active = c.slug === activeConcursoSlug;
+              return (
+                <button
+                  key={c.slug}
+                  onClick={() => setActiveConcursoSlug(c.slug)}
+                  className={`h-8 rounded-lg px-3.5 transition-all ${
+                    active
+                      ? 'bg-blue-700 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                  title={`${c.nome} — ${c.banca}`}
+                >
+                  {c.municipio}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="max-w-[1440px] mx-auto min-h-16 px-4 sm:px-6 lg:px-10 xl:px-12 grid lg:grid-cols-[1fr_auto_1fr] gap-4 items-center py-3">
           <div className="flex items-center gap-3">
             <img src={logoColor} alt="ConcursosAI" className="h-8 w-8" />
@@ -81,7 +136,7 @@ const Dashboard = () => {
                 setSelectedCargoSlug(slug);
                 // Abre direto a aba do cargo escolhido — vagas, salário,
                 // requisitos e matérias com gerador de simulado por matéria.
-                navigate(`/cargos/${slug}`);
+                navigate(`/c/${activeConcursoSlug}/cargos/${slug}`);
               }}
               className="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 transition-colors"
             >
@@ -130,15 +185,15 @@ const Dashboard = () => {
             </h1>
             <p className="mt-4 max-w-2xl text-sm sm:text-base text-white/80 leading-relaxed">
               {hasAccess
-                ? `Seu acesso já está liberado. O foco agora é treinar para ${selectedCargo.nome} com mais constância e menos dispersão.`
-                : `Sua conta já está pronta. Assim que o acesso for liberado, você vai treinar para ${selectedCargo.nome} com tudo organizado.`}
+                ? `Seu acesso já está liberado. O foco agora é treinar para ${displayCargo.nome} com mais constância e menos dispersão.`
+                : `Sua conta já está pronta. Assim que o acesso for liberado, você vai treinar para ${displayCargo.nome} com tudo organizado.`}
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               {hasAccess ? (
                 <button
                   onClick={() =>
-                    navigate(`/exam?banca=${encodeURIComponent(editalInfo.banca)}&cargo=${encodeURIComponent(selectedCargo.nome)}`)
+                    navigate(`/c/${activeConcursoSlug}/exam?banca=${encodeURIComponent(editalInfo.banca)}&cargo=${encodeURIComponent(displayCargo.nome)}`)
                   }
                   className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl text-sm font-extrabold bg-amber-400 text-slate-950 hover:bg-amber-300 transition-colors"
                 >
@@ -156,7 +211,7 @@ const Dashboard = () => {
                 </button>
               )}
               <button
-                onClick={() => navigate(`/cargos/${selectedCargo.slug}`)}
+                onClick={() => navigate(`/c/${activeConcursoSlug}/cargos/${displayCargo.slug}`)}
                 className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl border border-white/20 bg-white/10 text-white text-sm font-bold hover:bg-white/15 transition-colors"
               >
                 Ver cargo selecionado
@@ -168,7 +223,7 @@ const Dashboard = () => {
             {[
               ['Status do acesso', status === 'active' ? 'Liberado' : 'Pendente', CheckCircle2],
               ['Plano', planType === 'owner' ? 'Owner' : planType === 'manual' ? 'Manual' : planType, LayoutDashboard],
-              ['Cargo atual', selectedCargo.nome, Building2],
+              ['Cargo atual', displayCargo.nome, Building2],
             ].map(([label, value, Icon]) => (
               <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
@@ -204,7 +259,7 @@ const Dashboard = () => {
               Seu próximo passo
             </p>
             <h2 className="font-['Manrope'] text-3xl font-extrabold tracking-[-0.03em] text-slate-950">
-              Foque em {selectedCargo.nome}
+              Foque em {displayCargo.nome}
             </h2>
             <p className="text-base text-slate-600 leading-relaxed mt-4">
               Você já deixou um cargo selecionado no header. Agora é só entrar nas matérias dele e transformar o edital em treino prático.
@@ -213,7 +268,7 @@ const Dashboard = () => {
             <div className="mt-6 grid gap-3">
               {[
                 ['Simulados com cara de prova', BookOpenCheck],
-                [`${selectedCargo.materiasIds.length} matérias mapeadas`, FileText],
+                [`${displayCargo.materiasIds.length} matérias mapeadas`, FileText],
                 ['Treino mais rápido e objetivo', Clock3],
               ].map(([label, Icon]) => (
                 <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -228,16 +283,16 @@ const Dashboard = () => {
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() =>
-                  navigate(`/exam?banca=${encodeURIComponent(editalInfo.banca)}&cargo=${encodeURIComponent(selectedCargo.nome)}`)
+                  navigate(`/c/${activeConcursoSlug}/exam?banca=${encodeURIComponent(editalInfo.banca)}&cargo=${encodeURIComponent(displayCargo.nome)}`)
                 }
                 disabled={!hasAccess}
                 className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-blue-700 text-white text-sm font-bold hover:bg-blue-800 transition-colors disabled:opacity-60"
               >
                 <Sparkles className="h-4 w-4 text-amber-300" />
-                Gerar simulado de {selectedCargo.nome}
+                Gerar simulado de {displayCargo.nome}
               </button>
               <button
-                onClick={() => navigate(`/cargos/${selectedCargo.slug}`)}
+                onClick={() => navigate(`/c/${activeConcursoSlug}/cargos/${displayCargo.slug}`)}
                 className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:text-blue-700 hover:border-blue-200 transition-colors"
               >
                 Ver matérias do cargo
@@ -270,7 +325,7 @@ const Dashboard = () => {
                 return (
                   <button
                     key={cargo.slug}
-                    onClick={() => navigate(`/cargos/${cargo.slug}`)}
+                    onClick={() => navigate(`/c/${activeConcursoSlug}/cargos/${cargo.slug}`)}
                     className="text-left rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:border-blue-300 hover:bg-white transition-colors"
                   >
                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-slate-200 mb-3">

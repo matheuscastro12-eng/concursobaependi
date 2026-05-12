@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Sparkles, Briefcase, Clock, DollarSign, Award } from 'lucide-react';
-import { getCargoBySlug, getMateriaById, editalInfo, NIVEL_LABEL } from '@/data/baependi';
+import { getCargoBySlug, getMateriaById, NIVEL_LABEL } from '@/data/concursos';
+import { useActiveConcurso } from '@/hooks/useActiveConcurso';
 import { useTrainingCargo } from '@/hooks/useTrainingCargo';
 import logoColor from '@/assets/logo-concursos.svg';
 
@@ -22,31 +23,32 @@ const CATEGORIA_COLOR: Record<string, string> = {
 const CargoDetalhe = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const cargo = slug ? getCargoBySlug(slug) : undefined;
+  const { concurso, slug: concursoSlug } = useActiveConcurso();
+  const cargo = slug ? getCargoBySlug(concurso, slug) : undefined;
   const { setSelectedCargoSlug } = useTrainingCargo();
 
-  if (!cargo) return <Navigate to="/" replace />;
-
   useEffect(() => {
-    setSelectedCargoSlug(cargo.slug);
-  }, [cargo.slug, setSelectedCargoSlug]);
+    if (cargo) setSelectedCargoSlug(cargo.slug);
+  }, [cargo, setSelectedCargoSlug]);
+
+  if (!cargo) return <Navigate to={`/c/${concursoSlug}`} replace />;
 
   const handleGerar = (materiaNome: string) => {
     const params = new URLSearchParams({
       tema: materiaNome,
-      banca: editalInfo.banca,
+      banca: concurso.banca,
       cargo: cargo.nome,
     });
-    navigate(`/exam?${params.toString()}`);
+    navigate(`/c/${concursoSlug}/exam?${params.toString()}`);
   };
 
   const handleGerarTodas = () => {
     const params = new URLSearchParams({
       tema: `Conhecimentos gerais e específicos do cargo de ${cargo.nome}`,
-      banca: editalInfo.banca,
+      banca: concurso.banca,
       cargo: cargo.nome,
     });
-    navigate(`/exam?${params.toString()}`);
+    navigate(`/c/${concursoSlug}/exam?${params.toString()}`);
   };
 
   return (
@@ -71,7 +73,7 @@ const CargoDetalhe = () => {
         <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-[0_1px_2px_rgba(15,23,42,0.04)] mb-8 cai-slide-up">
           <p className="inline-flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.22em] text-blue-700 mb-3 cai-slide-up cai-delay-1">
             <span className="w-6 h-px bg-amber-500" />
-            {NIVEL_LABEL[cargo.nivel]} · {editalInfo.municipio}/{editalInfo.uf}
+            {NIVEL_LABEL[cargo.nivel]} · {concurso.municipio}/{concurso.uf}
           </p>
           <h1 className="font-['Manrope'] font-extrabold text-2xl sm:text-3xl tracking-[-0.02em] text-slate-900 mb-4 cai-slide-up cai-delay-2">
             {cargo.nome}
@@ -80,7 +82,7 @@ const CargoDetalhe = () => {
             <Stat icon={Briefcase} label="Vagas" value={cargo.vagas} />
             <Stat icon={Clock} label="Carga" value={cargo.cargaHoraria} />
             <Stat icon={DollarSign} label="Salário" value={cargo.salario} />
-            <Stat icon={Award} label="Banca" value={editalInfo.banca} />
+            <Stat icon={Award} label="Banca" value={concurso.banca} />
           </div>
           <p className="text-[13px] text-slate-600 leading-relaxed mb-6 cai-slide-up cai-delay-4">
             <strong className="text-slate-800">Requisitos:</strong> {cargo.requisitos}
@@ -109,7 +111,7 @@ const CargoDetalhe = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {cargo.materiasIds.map((id) => {
-              const m = getMateriaById(id);
+              const m = getMateriaById(concurso, id);
               if (!m) return null;
               return (
                 <div
@@ -152,7 +154,7 @@ const CargoDetalhe = () => {
           <p className="text-sm text-slate-600 leading-relaxed">
             Gere as questões da matéria que você quer treinar. Você escolhe quantidade,
             nível de dificuldade e número de alternativas. As questões são geradas no
-            padrão da banca {editalInfo.banca}.
+            padrão da banca {concurso.banca}.
           </p>
         </div>
       </main>

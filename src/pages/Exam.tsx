@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useActiveConcurso } from '@/hooks/useActiveConcurso';
 import { useToast } from '@/hooks/use-toast';
 import { useExamGenerator, type ExamConfig } from '@/hooks/useExamGenerator';
 import { ArrowLeft } from 'lucide-react';
@@ -30,9 +31,10 @@ const Exam = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const { concurso, slug: concursoSlug } = useActiveConcurso();
   const [searchParams] = useSearchParams();
   const temaFromUrl = searchParams.get('tema') ?? '';
-  const bancaFromUrl = searchParams.get('banca') ?? 'INEPAM';
+  const bancaFromUrl = searchParams.get('banca') ?? concurso.banca;
   const cargoFromUrl = searchParams.get('cargo') ?? '';
 
   const [config, setConfig] = useState<ExamConfig>({
@@ -125,7 +127,7 @@ const Exam = () => {
     // 1) Tenta o BANCO DE QUESTÕES (instantâneo, sem IA).
     // Match exato de tema → matéria. Se houver questões suficientes,
     // monta o simulado direto do banco.
-    const fromBank = await tryPickFromBank(tema, config);
+    const fromBank = await tryPickFromBank(tema, config, concursoSlug);
     if (fromBank) {
       setShowSimulation(false);
       setExamStarted(true);
@@ -177,7 +179,7 @@ const Exam = () => {
       <header className="border-b border-slate-200/70 bg-white/80 backdrop-blur-xl sticky top-0 z-30 cai-fade-in">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <button
-            onClick={() => cargoFromUrl ? navigate(-1) : navigate('/')}
+            onClick={() => cargoFromUrl ? navigate(-1) : navigate(`/c/${concursoSlug}`)}
             className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-700 transition-colors cai-interactive"
           >
             <ArrowLeft className="w-4 h-4" />

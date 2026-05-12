@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import PageSkeleton from "./components/PageSkeleton";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -12,6 +12,7 @@ import AccessRoute from "./components/auth/AccessRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useVisitorTracking } from "./hooks/useVisitorTracking";
 
+import ConcursosLanding from "./pages/ConcursosLanding";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,17 @@ const TrackedRoutes = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Redirects legados: /cargos/:slug e /exam (sem concurso) → baependi.
+const LegacyCargoRedirect = () => {
+  const { slug } = useParams<{ slug: string }>();
+  return <Navigate to={`/c/baependi/cargos/${slug ?? ''}`} replace />;
+};
+
+const LegacyExamRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`/c/baependi/exam${location.search}`} replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -41,16 +53,26 @@ const App = () => (
           <TrackedRoutes>
           <Suspense fallback={<LazyFallback />}>
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/cargos/:slug" element={<CargoDetalhe />} />
+              {/* Landing inicial: seletor de concurso */}
+              <Route path="/" element={<ConcursosLanding />} />
+
+              {/* Por concurso */}
+              <Route path="/c/:concursoSlug" element={<Home />} />
+              <Route path="/c/:concursoSlug/cargos/:slug" element={<CargoDetalhe />} />
               <Route
-                path="/exam"
+                path="/c/:concursoSlug/exam"
                 element={
                   <AccessRoute>
                     <Exam />
                   </AccessRoute>
                 }
               />
+
+              {/* Backward-compat */}
+              <Route path="/cargos/:slug" element={<LegacyCargoRedirect />} />
+              <Route path="/exam" element={<LegacyExamRedirect />} />
+
+              {/* Globais (não-por-concurso) */}
               <Route
                 path="/dashboard"
                 element={

@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { materias as materiasMap, type Materia } from '@/data/baependi';
+import { getConcursoBySlug, DEFAULT_CONCURSO_SLUG } from '@/data/concursos';
 import type { ExamConfig } from '@/hooks/useExamGenerator';
 
 interface BankQuestion {
@@ -11,13 +11,18 @@ interface BankQuestion {
 }
 
 /**
- * Tenta resolver `tema` (string mostrada ao aluno) pra um `materia_id` real.
- * Match exato pelo nome da matéria; se não achar, retorna null e o fluxo
- * cai pro Gemini ao vivo.
+ * Tenta resolver `tema` (string mostrada ao aluno) pra um `materia_id` real
+ * dentro de um concurso específico. Match exato pelo nome da matéria; se
+ * não achar, retorna null e o fluxo cai pro Gemini ao vivo.
  */
-export const findMateriaIdByNome = (tema: string): string | null => {
+export const findMateriaIdByNome = (
+  tema: string,
+  concursoSlug: string = DEFAULT_CONCURSO_SLUG,
+): string | null => {
   const norm = tema.trim().toLowerCase();
-  for (const [id, m] of Object.entries(materiasMap)) {
+  const concurso = getConcursoBySlug(concursoSlug) ?? getConcursoBySlug(DEFAULT_CONCURSO_SLUG);
+  if (!concurso) return null;
+  for (const [id, m] of Object.entries(concurso.materias)) {
     if (m.nome.toLowerCase() === norm) return id;
   }
   return null;
@@ -40,8 +45,9 @@ export interface BankResult {
 export const tryPickFromBank = async (
   tema: string,
   config: ExamConfig,
+  concursoSlug: string = DEFAULT_CONCURSO_SLUG,
 ): Promise<BankResult | null> => {
-  const materiaId = findMateriaIdByNome(tema);
+  const materiaId = findMateriaIdByNome(tema, concursoSlug);
   if (!materiaId) return null;
 
   const { data, error } = await supabase.rpc('pick_questions', {
@@ -49,7 +55,8 @@ export const tryPickFromBank = async (
     _nivel: config.nivel,
     _num_alternativas: config.numAlternativas ?? 5,
     _limit: config.quantidade,
-  });
+    _concurso_slug: concursoSlug,
+  } as Record<string, unknown>);
 
   if (error || !Array.isArray(data) || data.length < config.quantidade) {
     return null;
@@ -160,18 +167,21 @@ export const saveGeneratedToBank = (
     materiaId: string;
     categoria: 'gerais' | 'educacao' | 'saude' | 'especifico';
     cargoSlug?: string | null;
+    concursoSlug?: string;
   },
 ): void => {
   const numAlts = config.numAlternativas ?? 5;
   const parsed = parseQuestionsFromMarkdown(markdown, numAlts);
   if (parsed.length === 0) return;
 
+  const concursoSlug = meta.concursoSlug ?? DEFAULT_CONCURSO_SLUG;
   const payload = parsed.map((p) => ({
     materia_id: meta.materiaId,
     categoria: meta.categoria,
     nivel: config.nivel,
     banca: config.banca?.trim() || 'INEPAM',
     cargo_slug: meta.cargoSlug ?? null,
+    concurso_slug: concursoSlug,
     num_alternativas: numAlts,
     enunciado: p.enunciado,
     alternativas: p.alternativas,

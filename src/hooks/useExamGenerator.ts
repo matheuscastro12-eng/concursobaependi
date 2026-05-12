@@ -23,6 +23,19 @@ const GEMINI_PROXY = '/api/gemini';
 const useProxy = !import.meta.env.VITE_GOOGLE_AI_API_KEY;
 
 const buildBancaStyleBlock = (banca: string): string => {
+  if (/consulplan/i.test(banca)) {
+    return `PADRÃO INSTITUTO CONSULPLAN
+- Trate o Instituto Consulplan como banca tradicional de concursos públicos brasileiros, com prova objetiva e linguagem formal/culta.
+- Gere questões INÉDITAS, mas calibradas pelo estilo da Consulplan: enunciados contextualizados, situacionais, com texto-base ou mini-caso prático.
+- Use 4 alternativas (A-D) quando solicitado; a Consulplan trabalha tanto com 4 quanto com 5 alternativas.
+- Comandos típicos da banca: "Assinale a alternativa INCORRETA", "Assinale a alternativa que NÃO contém…", "Marque V para verdadeiro e F para falso e assinale a sequência correta", "Analise as afirmativas a seguir e assinale a alternativa correta".
+- Distratores plausíveis e tecnicamente verossímeis: o erro está num detalhe normativo, num prazo, numa exceção, num requisito formal — nunca em alternativa absurda.
+- Linguagem formal, culta, terminologicamente precisa; evite gírias e construções coloquiais.
+- Em Português, cobre interpretação de texto contextualizada, semântica, coesão/coerência, além de gramática normativa.
+- Em conhecimentos específicos, prefira aplicação ao caso concreto (situação-problema) em vez de pergunta seca de definição.
+- A questão deve parecer de prova real da Consulplan: contextualizada, com nuance, mas verificável pelo edital/legislação.`;
+  }
+
   if (!/inepam/i.test(banca)) {
     return `PADRÃO DA BANCA
 - Aplique o estilo declarado pelo usuário para a banca ${banca}.
