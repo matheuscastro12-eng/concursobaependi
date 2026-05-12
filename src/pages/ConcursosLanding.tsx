@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useSubscription } from '@/hooks/useSubscription';
 import SocialProofBanner from '@/components/landing/SocialProofBanner';
+import { getTheme } from '@/lib/concursoTheme';
 
 const ConcursosLanding = () => {
   const navigate = useNavigate();
@@ -88,18 +89,20 @@ const ConcursosLanding = () => {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          {concursos.map((c) => (
+          {concursos.map((c) => {
+            const ct = getTheme(c.slug);
+            return (
             <button
               key={c.slug}
               onClick={() => navigate(`/c/${c.slug}`)}
-              className="group flex flex-col rounded-[24px] border border-slate-200 bg-white p-6 text-left shadow-[0_10px_40px_-24px_rgba(15,23,42,0.18)] transition-all hover:border-blue-500/40 hover:shadow-[0_18px_50px_-24px_rgba(37,99,235,0.30)] cai-soft-pop cai-interactive sm:p-8"
+              className={`group flex flex-col rounded-[24px] border border-slate-200 bg-white p-6 text-left shadow-[0_10px_40px_-24px_rgba(15,23,42,0.18)] transition-all ${ct.borderHover} ${ct.shadowHover} cai-soft-pop cai-interactive sm:p-8`}
             >
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 transition-transform group-hover:scale-110">
-                  <Building2 className="h-6 w-6 text-blue-700" />
+                  <Building2 className={`h-6 w-6 ${ct.iconColor}`} />
                 </div>
                 <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-blue-700">
+                  <p className={`text-[10.5px] font-bold uppercase tracking-[0.18em] ${ct.textHighlight}`}>
                     Edital {c.numeroEdital}
                   </p>
                   <h2 className="font-['Manrope'] text-2xl font-extrabold tracking-tight text-slate-950">
@@ -133,12 +136,13 @@ const ConcursosLanding = () => {
                 )}
               </div>
 
-              <div className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#1E40AF] via-[#1D4ED8] to-[#2563EB] px-5 text-sm font-bold text-white shadow-[0_8px_24px_-8px_rgba(37,99,235,0.45)] transition-all group-hover:brightness-110 cai-sheen">
+              <div className={`mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-br ${ct.gradient} px-5 text-sm font-bold text-white shadow-[0_8px_24px_-8px_rgba(37,99,235,0.45)] transition-all group-hover:brightness-110 cai-sheen`}>
                 Estudar
                 <ArrowRight className="h-4 w-4" />
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         <footer className="mt-16 border-t border-slate-200 pt-8 text-center">

@@ -110,10 +110,21 @@ export function useSubscription() {
     };
   }, [authLoading, user]);
 
-  const hasAccess = useMemo(() => status === 'active', [status]);
+  const accessibleConcursoSlug = useMemo<string | null>(() => {
+    if (status !== 'active') return null;
+    // Owner enxerga tudo, mas preferimos não bloquear — devolve o slug do profile,
+    // ou baependi como fallback.
+    if (planType === 'owner') return concursoSlug || 'baependi';
+    if (concursoSlug === 'alagoa') return 'alagoa';
+    if (concursoSlug === 'baependi') return 'baependi';
+    return concursoSlug || null;
+  }, [status, planType, concursoSlug]);
+
+  const hasAccess = useMemo(() => accessibleConcursoSlug !== null, [accessibleConcursoSlug]);
 
   return {
     hasAccess,
+    accessibleConcursoSlug,
     status,
     planType,
     accessExpiresAt,

@@ -9,6 +9,7 @@ import PageSkeleton from "./components/PageSkeleton";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
 import AccessRoute from "./components/auth/AccessRoute";
+import ConcursoAccessGuard from "./components/auth/ConcursoAccessGuard";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useVisitorTracking } from "./hooks/useVisitorTracking";
 
@@ -72,7 +73,9 @@ const App = () => (
                 path="/c/:concursoSlug/exam"
                 element={
                   <AccessRoute>
-                    <Exam />
+                    <ConcursoAccessGuard>
+                      <Exam />
+                    </ConcursoAccessGuard>
                   </AccessRoute>
                 }
               />

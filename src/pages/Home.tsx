@@ -28,6 +28,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useSubscription } from '@/hooks/useSubscription';
 import InteractiveQuestionPreview from '@/components/landing/InteractiveQuestionPreview';
 import SocialProofBanner from '@/components/landing/SocialProofBanner';
+import { getTheme } from '@/lib/concursoTheme';
 
 const NIVEL_ICON: Record<Nivel, typeof Building2> = {
   alfabetizado: Building2,
@@ -53,10 +54,11 @@ const Home = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { canAccessAdmin } = useAdmin();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, accessibleConcursoSlug } = useSubscription();
   const { concurso, slug: concursoSlug } = useActiveConcurso();
   const cargos = concurso.cargos;
   const isAlagoa = concursoSlug === 'alagoa';
+  const theme = getTheme(concursoSlug);
   const precoLabelCurto = isAlagoa ? 'R$ 60 · pagamento único' : 'R$ 40/mês';
   const acessoLabel = isAlagoa ? 'Acesso vitalício · PIX' : 'Acesso mensal';
   const ctaPrincipal = isAlagoa ? 'Pagar R$ 60 (PIX único)' : 'Começar por R$ 40/mês';
@@ -129,9 +131,26 @@ const Home = () => {
       </header>
 
       <main>
+        {accessibleConcursoSlug && accessibleConcursoSlug !== concursoSlug && (
+          <div className="mx-auto max-w-[1440px] px-4 pt-4 sm:px-6 lg:px-10 xl:px-12">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              <span>
+                Você tem acesso ao concurso de{' '}
+                <strong className="font-bold capitalize">{accessibleConcursoSlug}</strong>.
+              </span>
+              <button
+                onClick={() => navigate(`/c/${accessibleConcursoSlug}`)}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-amber-500 px-3 text-xs font-bold text-white transition-colors hover:bg-amber-600"
+              >
+                Voltar pra {accessibleConcursoSlug}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
         <section className="mx-auto max-w-[1440px] px-4 pt-10 sm:px-6 sm:pt-14 lg:px-10 xl:px-12">
           <div className="grid items-stretch gap-10 lg:grid-cols-[1.18fr_0.82fr] xl:gap-12">
-            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0F172A] via-[#1E3A8A] to-[#2563EB] p-8 text-white shadow-[0_24px_80px_-28px_rgba(30,58,138,0.45)] cai-slide-up cai-sheen sm:p-10">
+            <div className={`relative overflow-hidden rounded-[28px] bg-gradient-to-br ${theme.gradient} p-8 text-white shadow-[0_24px_80px_-28px_rgba(30,58,138,0.45)] cai-slide-up cai-sheen sm:p-10`}>
               <div className="pointer-events-none absolute inset-0 opacity-20 cai-animated-grid" />
               <div className="relative z-10">
                 <p className="mb-4 inline-flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.22em] text-amber-300 cai-slide-up cai-delay-1">
@@ -309,7 +328,7 @@ const Home = () => {
                 </div>
                 <button
                   onClick={() => navigate(`/auth?mode=criar&concurso=${concursoSlug}`)}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-800 cai-interactive"
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl ${theme.primaryBg} px-5 text-sm font-bold text-white transition-colors ${theme.primaryHover} cai-interactive`}
                 >
                   {ctaSecundario}
                   <ArrowRight className="h-4 w-4" />
@@ -404,7 +423,7 @@ const Home = () => {
               </div>
               <button
                 onClick={() => navigate(`/auth?mode=criar&concurso=${concursoSlug}`)}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-800 cai-interactive"
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl ${theme.primaryBg} px-5 text-sm font-bold text-white transition-colors ${theme.primaryHover} cai-interactive`}
               >
                 Criar conta para testar
                 <Sparkles className="h-4 w-4 text-amber-300" />
@@ -414,7 +433,7 @@ const Home = () => {
         </section>
 
         <section className="mx-auto mt-10 max-w-[1440px] px-4 sm:px-6 lg:px-10 xl:px-12">
-          <div className="rounded-[28px] bg-gradient-to-r from-[#0F172A] via-[#1E3A8A] to-[#2563EB] p-7 text-white shadow-[0_24px_80px_-28px_rgba(30,58,138,0.45)] cai-slide-up cai-sheen sm:p-9">
+          <div className={`rounded-[28px] bg-gradient-to-r ${theme.gradient} p-7 text-white shadow-[0_24px_80px_-28px_rgba(30,58,138,0.45)] cai-slide-up cai-sheen sm:p-9`}>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-2xl">
                 <p className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.22em] text-amber-300">
@@ -499,7 +518,7 @@ const Home = () => {
                   <button
                     key={cargo.slug}
                     onClick={() => navigate(`/c/${concursoSlug}/cargos/${cargo.slug}`)}
-                    className="group rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-blue-500/40 hover:shadow-[0_12px_32px_-12px_rgba(37,99,235,0.20)] cai-slide-up cai-interactive"
+                    className={`group rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all ${theme.borderHover} ${theme.shadowHover} cai-slide-up cai-interactive`}
                   >
                     <div className="mb-3 flex items-start justify-between">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 transition-transform group-hover:scale-110 group-hover:rotate-3">

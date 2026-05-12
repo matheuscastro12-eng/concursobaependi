@@ -1,3 +1,4 @@
+Initialising login role...
 export type Json =
   | string
   | number
@@ -10,10 +11,154 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      editais: {
+        Row: {
+          ano: number | null
+          banca: string | null
+          cargo: string | null
+          created_at: string
+          id: string
+          municipio: string | null
+          pdf_storage_path: string | null
+          status: string
+          status_message: string | null
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ano?: number | null
+          banca?: string | null
+          cargo?: string | null
+          created_at?: string
+          id?: string
+          municipio?: string | null
+          pdf_storage_path?: string | null
+          status?: string
+          status_message?: string | null
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ano?: number | null
+          banca?: string | null
+          cargo?: string | null
+          created_at?: string
+          id?: string
+          municipio?: string | null
+          pdf_storage_path?: string | null
+          status?: string
+          status_message?: string | null
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      edital_materias: {
+        Row: {
+          created_at: string
+          edital_id: string
+          id: string
+          nome: string
+          num_questoes: number | null
+          peso: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          edital_id: string
+          id?: string
+          nome: string
+          num_questoes?: number | null
+          peso?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          edital_id?: string
+          id?: string
+          nome?: string
+          num_questoes?: number | null
+          peso?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edital_materias_edital_id_fkey"
+            columns: ["edital_id"]
+            isOneToOne: false
+            referencedRelation: "editais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_generations: {
+        Row: {
+          banca: string | null
+          created_at: string
+          id: string
+          nivel: string
+          num_questoes: number
+          resultado: string
+          tema: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          banca?: string | null
+          created_at?: string
+          id?: string
+          nivel: string
+          num_questoes: number
+          resultado: string
+          tema: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          banca?: string | null
+          created_at?: string
+          id?: string
+          nivel?: string
+          num_questoes?: number
+          resultado?: string
+          tema?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       generated_exam_cache: {
         Row: {
           banca: string
@@ -62,9 +207,67 @@ export type Database = {
         }
         Relationships: []
       }
+      generation_logs: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          feature: string
+          id: string
+          meta: Json | null
+          user_id: string
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          feature: string
+          id?: string
+          meta?: Json | null
+          user_id: string
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          feature?: string
+          id?: string
+          meta?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      page_views: {
+        Row: {
+          id: number
+          path: string
+          referrer: string | null
+          user_agent: string | null
+          user_id: string | null
+          viewed_at: string
+          visitor_id: string
+        }
+        Insert: {
+          id?: number
+          path: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          viewed_at?: string
+          visitor_id: string
+        }
+        Update: {
+          id?: number
+          path?: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          viewed_at?: string
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       payment_submissions: {
         Row: {
           amount_cents: number
+          coupon_code: string | null
           created_at: string
           email: string
           full_name: string | null
@@ -84,6 +287,7 @@ export type Database = {
         }
         Insert: {
           amount_cents?: number
+          coupon_code?: string | null
           created_at?: string
           email: string
           full_name?: string | null
@@ -103,6 +307,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          coupon_code?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
@@ -122,603 +327,361 @@ export type Database = {
         }
         Relationships: []
       }
-      crm_funnel_events: {
+      pix_payments: {
         Row: {
-          created_at: string
-          event_type: string
-          from_stage: string | null
-          id: string
-          lead_id: string
-          metadata: Json | null
-          to_stage: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          event_type: string
-          from_stage?: string | null
-          id?: string
-          lead_id: string
-          metadata?: Json | null
-          to_stage?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          event_type?: string
-          from_stage?: string | null
-          id?: string
-          lead_id?: string
-          metadata?: Json | null
-          to_stage?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "crm_funnel_events_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "crm_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      crm_health_scores: {
-        Row: {
-          calculated_at: string
-          days_since_last_activity: number | null
-          flashcards_reviewed_last_7d: number | null
-          generations_last_7d: number | null
-          id: string
-          logins_last_7d: number | null
-          risk_level: string | null
-          score: number
-          user_id: string
-        }
-        Insert: {
-          calculated_at?: string
-          days_since_last_activity?: number | null
-          flashcards_reviewed_last_7d?: number | null
-          generations_last_7d?: number | null
-          id?: string
-          logins_last_7d?: number | null
-          risk_level?: string | null
-          score?: number
-          user_id: string
-        }
-        Update: {
-          calculated_at?: string
-          days_since_last_activity?: number | null
-          flashcards_reviewed_last_7d?: number | null
-          generations_last_7d?: number | null
-          id?: string
-          logins_last_7d?: number | null
-          risk_level?: string | null
-          score?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
-      crm_leads: {
-        Row: {
-          assigned_to: string | null
-          churned_at: string | null
-          converted_at: string | null
-          created_at: string
-          email: string
-          full_name: string | null
-          funnel_stage: string
-          id: string
-          monthly_value: number | null
-          notes: string | null
-          phone: string | null
-          plan_type: string | null
-          source: string | null
-          tags: string[] | null
-          trial_started_at: string | null
-          updated_at: string
-          user_id: string | null
-          utm_campaign: string | null
-          utm_content: string | null
-          utm_medium: string | null
-          utm_source: string | null
-          utm_term: string | null
-        }
-        Insert: {
-          assigned_to?: string | null
-          churned_at?: string | null
-          converted_at?: string | null
-          created_at?: string
-          email: string
-          full_name?: string | null
-          funnel_stage?: string
-          id?: string
-          monthly_value?: number | null
-          notes?: string | null
-          phone?: string | null
-          plan_type?: string | null
-          source?: string | null
-          tags?: string[] | null
-          trial_started_at?: string | null
-          updated_at?: string
-          user_id?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-        }
-        Update: {
-          assigned_to?: string | null
-          churned_at?: string | null
-          converted_at?: string | null
-          created_at?: string
-          email?: string
-          full_name?: string | null
-          funnel_stage?: string
-          id?: string
-          monthly_value?: number | null
-          notes?: string | null
-          phone?: string | null
-          plan_type?: string | null
-          source?: string | null
-          tags?: string[] | null
-          trial_started_at?: string | null
-          updated_at?: string
-          user_id?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-        }
-        Relationships: []
-      }
-      crm_referrals: {
-        Row: {
+          comprovante_url: string | null
+          concurso_slug: string
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           id: string
-          referral_code: string
-          referred_email: string | null
-          referred_user_id: string | null
-          referrer_user_id: string
-          reward_applied_at: string | null
-          reward_type: string | null
           status: string
+          user_id: string
+          valor_centavos: number
         }
         Insert: {
+          comprovante_url?: string | null
+          concurso_slug: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           id?: string
-          referral_code: string
-          referred_email?: string | null
-          referred_user_id?: string | null
-          referrer_user_id: string
-          reward_applied_at?: string | null
-          reward_type?: string | null
           status?: string
+          user_id: string
+          valor_centavos: number
         }
         Update: {
+          comprovante_url?: string | null
+          concurso_slug?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           id?: string
-          referral_code?: string
-          referred_email?: string | null
-          referred_user_id?: string | null
-          referrer_user_id?: string
-          reward_applied_at?: string | null
-          reward_type?: string | null
           status?: string
-        }
-        Relationships: []
-      }
-      direct_messages: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          read: boolean
-          receiver_id: string
-          sender_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          read?: boolean
-          receiver_id: string
-          sender_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          read?: boolean
-          receiver_id?: string
-          sender_id?: string
-        }
-        Relationships: []
-      }
-      enamed_attempts: {
-        Row: {
-          answers: Json
-          area_filter: string | null
-          correct_answers: number
-          created_at: string
-          id: string
-          modo: string
-          percentage: number
-          source: string
-          total_questions: number
-          user_id: string
-        }
-        Insert: {
-          answers?: Json
-          area_filter?: string | null
-          correct_answers: number
-          created_at?: string
-          id?: string
-          modo: string
-          percentage: number
-          source?: string
-          total_questions: number
-          user_id: string
-        }
-        Update: {
-          answers?: Json
-          area_filter?: string | null
-          correct_answers?: number
-          created_at?: string
-          id?: string
-          modo?: string
-          percentage?: number
-          source?: string
-          total_questions?: number
           user_id?: string
+          valor_centavos?: number
         }
         Relationships: []
-      }
-      enamed_ebooks: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          specialty_id: string
-          specialty_name: string
-          updated_at: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          specialty_id: string
-          specialty_name: string
-          updated_at?: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          specialty_id?: string
-          specialty_name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      enamed_questions: {
-        Row: {
-          alternativa_a: string
-          alternativa_b: string
-          alternativa_c: string
-          alternativa_d: string
-          ano: number
-          anulada: boolean
-          area: string
-          created_at: string
-          enunciado: string
-          explicacao: string | null
-          gabarito: string
-          id: string
-          numero: number
-        }
-        Insert: {
-          alternativa_a: string
-          alternativa_b: string
-          alternativa_c: string
-          alternativa_d: string
-          ano?: number
-          anulada?: boolean
-          area: string
-          created_at?: string
-          enunciado: string
-          explicacao?: string | null
-          gabarito: string
-          id?: string
-          numero: number
-        }
-        Update: {
-          alternativa_a?: string
-          alternativa_b?: string
-          alternativa_c?: string
-          alternativa_d?: string
-          ano?: number
-          anulada?: boolean
-          area?: string
-          created_at?: string
-          enunciado?: string
-          explicacao?: string | null
-          gabarito?: string
-          id?: string
-          numero?: number
-        }
-        Relationships: []
-      }
-      fechamentos: {
-        Row: {
-          created_at: string
-          exam_config: Json | null
-          favorito: boolean
-          id: string
-          objetivos: string | null
-          resultado: string
-          tema: string
-          tipo: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          exam_config?: Json | null
-          favorito?: boolean
-          id?: string
-          objetivos?: string | null
-          resultado: string
-          tema: string
-          tipo?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          exam_config?: Json | null
-          favorito?: boolean
-          id?: string
-          objetivos?: string | null
-          resultado?: string
-          tema?: string
-          tipo?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      flashcards: {
-        Row: {
-          area: string | null
-          back: string
-          created_at: string
-          ease_factor: number
-          front: string
-          id: string
-          interval_days: number
-          next_review: string
-          repetitions: number
-          source_id: string | null
-          source_type: string
-          user_id: string
-        }
-        Insert: {
-          area?: string | null
-          back: string
-          created_at?: string
-          ease_factor?: number
-          front: string
-          id?: string
-          interval_days?: number
-          next_review?: string
-          repetitions?: number
-          source_id?: string | null
-          source_type?: string
-          user_id: string
-        }
-        Update: {
-          area?: string | null
-          back?: string
-          created_at?: string
-          ease_factor?: number
-          front?: string
-          id?: string
-          interval_days?: number
-          next_review?: string
-          repetitions?: number
-          source_id?: string | null
-          source_type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      follows: {
-        Row: {
-          created_at: string
-          follower_id: string
-          following_id: string
-          id: string
-        }
-        Insert: {
-          created_at?: string
-          follower_id: string
-          following_id: string
-          id?: string
-        }
-        Update: {
-          created_at?: string
-          follower_id?: string
-          following_id?: string
-          id?: string
-        }
-        Relationships: []
-      }
-      generation_logs: {
-        Row: {
-          created_at: string
-          function_name: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          function_name: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          function_name?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      post_comments: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          post_id: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          post_id: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          post_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_comments_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      post_likes: {
-        Row: {
-          created_at: string
-          id: string
-          post_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          post_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          post_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_likes_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      posts: {
-        Row: {
-          content: string
-          created_at: string
-          fechamento_id: string | null
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          fechamento_id?: string | null
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          fechamento_id?: string | null
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "posts_fechamento_id_fkey"
-            columns: ["fechamento_id"]
-            isOneToOne: false
-            referencedRelation: "fechamentos"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       profiles: {
         Row: {
-          avatar_url: string | null
-          bio: string | null
+          area_foco: string | null
+          concurso_slug: string
           created_at: string
-          email: string
+          email: string | null
           full_name: string | null
+          has_lifetime_access: boolean
           id: string
-          semester: string | null
-          university: string | null
+          phone: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
-          avatar_url?: string | null
-          bio?: string | null
+          area_foco?: string | null
+          concurso_slug?: string
           created_at?: string
-          email: string
+          email?: string | null
           full_name?: string | null
-          id?: string
-          semester?: string | null
-          university?: string | null
+          has_lifetime_access?: boolean
+          id: string
+          phone?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
-          avatar_url?: string | null
-          bio?: string | null
+          area_foco?: string | null
+          concurso_slug?: string
           created_at?: string
-          email?: string
+          email?: string | null
           full_name?: string | null
+          has_lifetime_access?: boolean
           id?: string
-          semester?: string | null
-          university?: string | null
+          phone?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      prova_attempts: {
+        Row: {
+          answers: Json
+          correct_answers: number
+          created_at: string
+          duration_seconds: number | null
+          finished_at: string | null
+          id: string
+          percentage: number
+          prova_id: string
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          correct_answers: number
+          created_at?: string
+          duration_seconds?: number | null
+          finished_at?: string | null
+          id?: string
+          percentage: number
+          prova_id: string
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          correct_answers?: number
+          created_at?: string
+          duration_seconds?: number | null
+          finished_at?: string | null
+          id?: string
+          percentage?: number
+          prova_id?: string
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prova_attempts_prova_id_fkey"
+            columns: ["prova_id"]
+            isOneToOne: false
+            referencedRelation: "provas_importadas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prova_questoes_importadas: {
+        Row: {
+          alternativas: string[]
+          created_at: string
+          edited_by_user: boolean
+          enunciado: string
+          gabarito: string
+          id: string
+          justificativa: string | null
+          justificativa_origem: string
+          numero: number
+          pagina_origem: number | null
+          prova_id: string
+          raw_extraction: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alternativas: string[]
+          created_at?: string
+          edited_by_user?: boolean
+          enunciado: string
+          gabarito: string
+          id?: string
+          justificativa?: string | null
+          justificativa_origem?: string
+          numero: number
+          pagina_origem?: number | null
+          prova_id: string
+          raw_extraction?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alternativas?: string[]
+          created_at?: string
+          edited_by_user?: boolean
+          enunciado?: string
+          gabarito?: string
+          id?: string
+          justificativa?: string | null
+          justificativa_origem?: string
+          numero?: number
+          pagina_origem?: number | null
+          prova_id?: string
+          raw_extraction?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prova_questoes_importadas_prova_id_fkey"
+            columns: ["prova_id"]
+            isOneToOne: false
+            referencedRelation: "provas_importadas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provas_importadas: {
+        Row: {
+          ano: number | null
+          attempts_count: number
+          banca: string | null
+          best_percentage: number | null
+          cargo: string | null
+          created_at: string
+          extraction_completed_at: string | null
+          extraction_cost_usd: number | null
+          extraction_started_at: string | null
+          gerar_justificativa_ia: boolean
+          id: string
+          num_alternativas: number
+          num_paginas: number | null
+          num_questoes: number
+          num_questoes_aprovadas: number
+          num_questoes_rejeitadas: number
+          pdf_size_bytes: number | null
+          pdf_storage_path: string | null
+          status: string
+          status_message: string | null
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ano?: number | null
+          attempts_count?: number
+          banca?: string | null
+          best_percentage?: number | null
+          cargo?: string | null
+          created_at?: string
+          extraction_completed_at?: string | null
+          extraction_cost_usd?: number | null
+          extraction_started_at?: string | null
+          gerar_justificativa_ia?: boolean
+          id?: string
+          num_alternativas: number
+          num_paginas?: number | null
+          num_questoes?: number
+          num_questoes_aprovadas?: number
+          num_questoes_rejeitadas?: number
+          pdf_size_bytes?: number | null
+          pdf_storage_path?: string | null
+          status?: string
+          status_message?: string | null
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ano?: number | null
+          attempts_count?: number
+          banca?: string | null
+          best_percentage?: number | null
+          cargo?: string | null
+          created_at?: string
+          extraction_completed_at?: string | null
+          extraction_cost_usd?: number | null
+          extraction_started_at?: string | null
+          gerar_justificativa_ia?: boolean
+          id?: string
+          num_alternativas?: number
+          num_paginas?: number | null
+          num_questoes?: number
+          num_questoes_aprovadas?: number
+          num_questoes_rejeitadas?: number
+          pdf_size_bytes?: number | null
+          pdf_storage_path?: string | null
+          status?: string
+          status_message?: string | null
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      question_bank: {
+        Row: {
+          alternativas: Json
+          banca: string
+          cargo_slug: string | null
+          categoria: string
+          comentario: string
+          concurso_slug: string
+          created_at: string
+          enunciado: string
+          gabarito: string
+          generated_batch: string | null
+          id: string
+          materia_id: string
+          nivel: string
+          num_alternativas: number
+          source_model: string | null
+        }
+        Insert: {
+          alternativas: Json
+          banca?: string
+          cargo_slug?: string | null
+          categoria: string
+          comentario: string
+          concurso_slug?: string
+          created_at?: string
+          enunciado: string
+          gabarito: string
+          generated_batch?: string | null
+          id?: string
+          materia_id: string
+          nivel: string
+          num_alternativas: number
+          source_model?: string | null
+        }
+        Update: {
+          alternativas?: Json
+          banca?: string
+          cargo_slug?: string | null
+          categoria?: string
+          comentario?: string
+          concurso_slug?: string
+          created_at?: string
+          enunciado?: string
+          gabarito?: string
+          generated_batch?: string | null
+          id?: string
+          materia_id?: string
+          nivel?: string
+          num_alternativas?: number
+          source_model?: string | null
+        }
+        Relationships: []
+      }
+      question_bank_seen: {
+        Row: {
+          question_id: string
+          seen_at: string
+          user_id: string
+        }
+        Insert: {
+          question_id: string
+          seen_at?: string
+          user_id: string
+        }
+        Update: {
+          question_id?: string
+          seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_seen_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
           access_expires_at: string | null
           created_at: string
-          current_period_end: string | null
+          granted_at: string | null
           granted_by: string | null
           id: string
+          notes: string | null
+          payment_provider: string | null
           plan_type: string
           status: string
           stripe_customer_id: string | null
+          stripe_price_id: string | null
           stripe_subscription_id: string | null
           updated_at: string
           user_id: string
@@ -726,12 +689,15 @@ export type Database = {
         Insert: {
           access_expires_at?: string | null
           created_at?: string
-          current_period_end?: string | null
+          granted_at?: string | null
           granted_by?: string | null
           id?: string
+          notes?: string | null
+          payment_provider?: string | null
           plan_type?: string
           status?: string
           stripe_customer_id?: string | null
+          stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
@@ -739,50 +705,17 @@ export type Database = {
         Update: {
           access_expires_at?: string | null
           created_at?: string
-          current_period_end?: string | null
+          granted_at?: string | null
           granted_by?: string | null
           id?: string
+          notes?: string | null
+          payment_provider?: string | null
           plan_type?: string
           status?: string
           stripe_customer_id?: string | null
+          stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      topic_progress: {
-        Row: {
-          created_at: string
-          exam_count: number
-          id: string
-          last_studied_at: string | null
-          resumo_count: number
-          studied: boolean
-          topic_key: string
-          topic_name: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          exam_count?: number
-          id?: string
-          last_studied_at?: string | null
-          resumo_count?: number
-          studied?: boolean
-          topic_key: string
-          topic_name: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          exam_count?: number
-          id?: string
-          last_studied_at?: string | null
-          resumo_count?: number
-          studied?: boolean
-          topic_key?: string
-          topic_name?: string
           user_id?: string
         }
         Relationships: []
@@ -790,19 +723,16 @@ export type Database = {
       user_roles: {
         Row: {
           created_at: string
-          id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
-          id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -810,46 +740,92 @@ export type Database = {
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          avatar_url: string | null
-          bio: string | null
-          full_name: string | null
-          semester: string | null
-          university: string | null
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          full_name?: string | null
-          semester?: string | null
-          university?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          full_name?: string | null
-          semester?: string | null
-          university?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
-      has_role: {
+      count_coupon_usage: { Args: { _code: string }; Returns: number }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      landing_stats: { Args: never; Returns: Json }
+      mark_questions_seen: { Args: { _ids: string[] }; Returns: undefined }
+      pick_questions:
+        | {
+            Args: {
+              _limit: number
+              _materia_id: string
+              _nivel: string
+              _num_alternativas: number
+            }
+            Returns: {
+              alternativas: Json
+              banca: string
+              cargo_slug: string | null
+              categoria: string
+              comentario: string
+              concurso_slug: string
+              created_at: string
+              enunciado: string
+              gabarito: string
+              generated_batch: string | null
+              id: string
+              materia_id: string
+              nivel: string
+              num_alternativas: number
+              source_model: string | null
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "question_bank"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: {
+              _concurso_slug?: string
+              _limit: number
+              _materia_id: string
+              _nivel: string
+              _num_alternativas: number
+            }
+            Returns: {
+              alternativas: Json
+              banca: string
+              cargo_slug: string | null
+              categoria: string
+              comentario: string
+              concurso_slug: string
+              created_at: string
+              enunciado: string
+              gabarito: string
+              generated_batch: string | null
+              id: string
+              materia_id: string
+              nivel: string
+              num_alternativas: number
+              source_model: string | null
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "question_bank"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+      question_bank_summary: { Args: never; Returns: Json }
+      save_questions_to_bank: { Args: { _questions: Json }; Returns: number }
+      track_pageview: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
+          _path: string
+          _referrer?: string
+          _user_agent?: string
+          _visitor_id: string
         }
-        Returns: boolean
+        Returns: undefined
       }
+      traffic_summary: { Args: { _days?: number }; Returns: Json }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -975,9 +951,13 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin"],
     },
   },
 } as const
+<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />

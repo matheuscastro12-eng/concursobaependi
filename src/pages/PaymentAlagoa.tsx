@@ -17,15 +17,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import logoColor from '@/assets/logo-concursos.svg';
 
-// TODO: substituir pela chave PIX real do recebedor Alagoa.
+// BR Code EMV-compliant gerado para chave PIX castroomath7@gmail.com · R$ 60,00.
+// CRC16-CCITT já calculado no final do payload — usuário pode pagar via copia-e-cola.
 const ALAGOA_PIX = {
-  chave: 'contato@concursosai.com.br',
-  beneficiario: 'ConcursosAI · Alagoa',
+  chave: 'castroomath7@gmail.com',
+  beneficiario: 'Matheus Castro',
   cidade: 'SAO PAULO',
   valorCentavos: 6000,
   valorLabel: 'R$ 60,00',
-  // Payload PIX placeholder — gere o BR Code real depois com a chave correta.
-  payload: 'PIX_CHAVE_PLACEHOLDER_contato@concursosai.com.br_R$60,00',
+  payload:
+    '00020126440014BR.GOV.BCB.PIX0122castroomath7@gmail.com520400005303986540560.005802BR5914Matheus Castro6009SAO PAULO62070503***63043B4B',
 } as const;
 
 const sanitizeFileName = (name: string) =>
@@ -51,6 +52,7 @@ const PaymentAlagoa = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedPayload, setCopiedPayload] = useState(false);
 
   const handleCopyPix = async () => {
     try {
@@ -62,6 +64,21 @@ const PaymentAlagoa = () => {
       toast({
         title: 'Não conseguimos copiar',
         description: error instanceof Error ? error.message : 'Copie a chave manualmente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCopyPayload = async () => {
+    try {
+      await navigator.clipboard.writeText(ALAGOA_PIX.payload);
+      setCopiedPayload(true);
+      window.setTimeout(() => setCopiedPayload(false), 1800);
+      toast({ title: 'PIX copia-e-cola copiado', description: 'Cole no campo PIX do seu banco.' });
+    } catch (error) {
+      toast({
+        title: 'Não conseguimos copiar',
+        description: error instanceof Error ? error.message : 'Copie o código manualmente.',
         variant: 'destructive',
       });
     }
@@ -126,7 +143,7 @@ const PaymentAlagoa = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-700" />
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-700" />
       </div>
     );
   }
@@ -139,7 +156,7 @@ const PaymentAlagoa = () => {
           <p className="text-sm text-slate-600">
             Você precisa estar logado pra registrar o pagamento PIX.
           </p>
-          <Button onClick={() => navigate('/auth?mode=entrar&concurso=alagoa')} className="bg-blue-700 hover:bg-blue-800">
+          <Button onClick={() => navigate('/auth?mode=entrar&concurso=alagoa')} className="bg-emerald-700 hover:bg-emerald-800">
             Ir pro login
           </Button>
         </div>
@@ -153,7 +170,7 @@ const PaymentAlagoa = () => {
         <div className="max-w-4xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
           <button
             onClick={() => navigate('/c/alagoa')}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar
@@ -195,23 +212,23 @@ const PaymentAlagoa = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 space-y-4">
+            <section className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-blue-700 mb-1">
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-emerald-700 mb-1">
                     1. Faça o PIX de {ALAGOA_PIX.valorLabel}
                   </p>
                   <h3 className="text-base font-extrabold text-slate-950">
                     Use o QR code ou copie a chave PIX
                   </h3>
                 </div>
-                <div className="h-10 w-10 rounded-lg bg-white text-blue-700 flex items-center justify-center border border-blue-100">
+                <div className="h-10 w-10 rounded-lg bg-white text-emerald-700 flex items-center justify-center border border-emerald-100">
                   <CreditCard className="h-5 w-5" />
                 </div>
               </div>
 
               <div className="grid sm:grid-cols-[168px_1fr] gap-4 items-center">
-                <div className="mx-auto rounded-lg bg-white p-3 border border-blue-100 shadow-sm">
+                <div className="mx-auto rounded-lg bg-white p-3 border border-emerald-100 shadow-sm">
                   <QRCodeSVG value={ALAGOA_PIX.payload} size={144} level="M" includeMargin />
                 </div>
 
@@ -232,6 +249,15 @@ const PaymentAlagoa = () => {
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     {copied ? 'Chave copiada' : 'Copiar chave PIX'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-10 font-semibold"
+                    onClick={handleCopyPayload}
+                  >
+                    {copiedPayload ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copiedPayload ? 'Código copiado' : 'Copiar PIX copia-e-cola'}
                   </Button>
                 </div>
               </div>

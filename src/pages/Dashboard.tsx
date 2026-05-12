@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpenCheck,
@@ -23,19 +23,27 @@ import { useToast } from '@/hooks/use-toast';
 import { createStripeCheckoutSession } from '@/lib/paymentSubmissions';
 import { Loader2 } from 'lucide-react';
 import logoColor from '@/assets/logo-concursos.svg';
+import { getTheme } from '@/lib/concursoTheme';
 
 const DASHBOARD_CONCURSO_KEY = 'cai:dashboard:activeConcurso';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { hasAccess, status, planType } = useSubscription();
+  const { hasAccess, status, planType, accessibleConcursoSlug, loading: subLoading } = useSubscription();
   const { canAccessAdmin } = useAdmin();
   const { selectedCargo, selectedCargoSlug, setSelectedCargoSlug } = useTrainingCargo();
   const { toast } = useToast();
   const [paying, setPaying] = useState(false);
 
-  const concursos = listConcursos();
+  const allConcursos = listConcursos();
+  // Tabs ficam restritas ao concurso pago. Se admin/owner sem slug pago → todos.
+  const concursos = useMemo(() => {
+    if (canAccessAdmin && !accessibleConcursoSlug) return allConcursos;
+    if (!accessibleConcursoSlug) return allConcursos;
+    return allConcursos.filter((c) => c.slug === accessibleConcursoSlug);
+  }, [allConcursos, accessibleConcursoSlug, canAccessAdmin]);
+
   const [activeConcursoSlug, setActiveConcursoSlug] = useState<string>(() => {
     if (typeof window === 'undefined') return DEFAULT_CONCURSO_SLUG;
     const stored = window.localStorage.getItem(DASHBOARD_CONCURSO_KEY);
@@ -45,6 +53,27 @@ const Dashboard = () => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(DASHBOARD_CONCURSO_KEY, activeConcursoSlug);
   }, [activeConcursoSlug]);
+
+  // Sincroniza tab ativa com o concurso que o user tem acesso.
+  useEffect(() => {
+    if (accessibleConcursoSlug && activeConcursoSlug !== accessibleConcursoSlug) {
+      setActiveConcursoSlug(accessibleConcursoSlug);
+    }
+  }, [accessibleConcursoSlug, activeConcursoSlug]);
+
+  // Sem acesso e sem perfil admin → manda pra landing.
+  useEffect(() => {
+    if (!subLoading && !hasAccess && !canAccessAdmin) {
+      toast({
+        title: 'Acesso necessário',
+        description: 'Faça seu pagamento pra acessar o dashboard.',
+        variant: 'destructive',
+      });
+    }
+  }, [subLoading, hasAccess, canAccessAdmin, toast]);
+  if (!subLoading && !hasAccess && !canAccessAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   const activeConcurso =
     getConcursoBySlug(activeConcursoSlug) ?? getConcursoBySlug(DEFAULT_CONCURSO_SLUG)!;
@@ -66,6 +95,7 @@ const Dashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConcursoSlug]);
   const displayCargo = visibleCargo ?? selectedCargo;
+  const theme = getTheme(activeConcursoSlug);
 
   const handlePay = async () => {
     if (!user?.email) return;
@@ -105,7 +135,7 @@ const Dashboard = () => {
                   onClick={() => setActiveConcursoSlug(c.slug)}
                   className={`h-8 rounded-lg px-3.5 transition-all ${
                     active
-                      ? 'bg-blue-700 text-white shadow-sm'
+                      ? `${theme.primaryBg} text-white shadow-sm`
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                   title={`${c.nome} — ${c.banca}`}
@@ -175,7 +205,7 @@ const Dashboard = () => {
 
       <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8 space-y-8">
         <section className="grid xl:grid-cols-[1.2fr_0.8fr] gap-5">
-          <div className="rounded-[28px] bg-gradient-to-br from-[#0F172A] via-[#1E3A8A] to-[#2563EB] p-7 sm:p-9 text-white shadow-[0_24px_80px_-28px_rgba(30,58,138,0.45)]">
+          <div className={`rounded-[28px] bg-gradient-to-br ${theme.gradient} p-7 sm:p-9 text-white shadow-[0_24px_80px_-28px_rgba(30,58,138,0.45)]`}>
             <p className="inline-flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.22em] text-amber-300 mb-4">
               <span className="w-7 h-px bg-amber-400" />
               {hasAccess ? 'Acesso ativo' : 'Conta pronta'}
