@@ -20,7 +20,7 @@ import {
   Target,
   TrendingUp,
 } from 'lucide-react';
-import { NIVEL_LABEL, type Nivel } from '@/data/concursos';
+import { NIVEL_LABEL, type Nivel, listConcursos } from '@/data/concursos';
 import { useActiveConcurso } from '@/hooks/useActiveConcurso';
 import logoColor from '@/assets/logo-concursos.svg';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,8 +54,29 @@ const Home = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { canAccessAdmin } = useAdmin();
-  const { hasAccess, accessibleConcursoSlug } = useSubscription();
+  const { hasAccess, accessibleConcursoSlugs } = useSubscription();
   const { concurso, slug: concursoSlug } = useActiveConcurso();
+  const alreadyHasCurrent = accessibleConcursoSlugs.includes(concursoSlug);
+  const showAddBanner = accessibleConcursoSlugs.length > 0 && !alreadyHasCurrent;
+  const ownedNames = accessibleConcursoSlugs
+    .map((slug) => {
+      const c = listConcursos().find((x) => x.slug === slug);
+      return c?.municipio ?? slug;
+    })
+    .join(', ');
+  const addCta = () => {
+    if (!user) {
+      navigate(`/auth?mode=criar&concurso=${concursoSlug}`);
+      return;
+    }
+    // Logado: vai direto pro fluxo de pagamento certo
+    if (concursoSlug === 'alagoa') {
+      navigate('/c/alagoa/pagamento');
+    } else {
+      // Baependi → Stripe via Auth (já trata user logado)
+      navigate(`/auth?mode=criar&concurso=${concursoSlug}`);
+    }
+  };
   const cargos = concurso.cargos;
   const isAlagoa = concursoSlug === 'alagoa';
   const theme = getTheme(concursoSlug);
@@ -131,18 +152,18 @@ const Home = () => {
       </header>
 
       <main>
-        {accessibleConcursoSlug && accessibleConcursoSlug !== concursoSlug && (
+        {showAddBanner && (
           <div className="mx-auto max-w-[1440px] px-4 pt-4 sm:px-6 lg:px-10 xl:px-12">
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
               <span>
-                Você tem acesso ao concurso de{' '}
-                <strong className="font-bold capitalize">{accessibleConcursoSlug}</strong>.
+                Você já estuda para: <strong className="font-bold capitalize">{ownedNames}</strong>.{' '}
+                <strong className="font-bold">Adicione este concurso também</strong> ao seu acesso.
               </span>
               <button
-                onClick={() => navigate(`/c/${accessibleConcursoSlug}`)}
+                onClick={addCta}
                 className="inline-flex h-8 items-center gap-1.5 rounded-md bg-amber-500 px-3 text-xs font-bold text-white transition-colors hover:bg-amber-600"
               >
-                Voltar pra {accessibleConcursoSlug}
+                Inscrever-se em {concurso.municipio}
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>

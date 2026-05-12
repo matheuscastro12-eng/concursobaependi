@@ -6,29 +6,29 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * Garante que o usuário só acesse rotas internas do concurso que ele pagou.
- * - Se loading → skeleton.
- * - Se tem acesso ao concurso atual → renderiza children.
- * - Se tem acesso a OUTRO concurso → redireciona pra `/c/<seuSlug>` com toast.
- * - Se não tem acesso a nenhum → redireciona pra `/c/<concursoSlug>` (landing pública).
+ * Garante que o usuário só acesse rotas internas dos concursos que ele pagou.
+ * Suporta acesso múltiplo:
+ * - Se o slug atual está em `accessibleConcursoSlugs` → libera.
+ * - Se NÃO está, mas o user tem outro acesso → redireciona pro primeiro
+ *   acessível com toast "você não tem acesso a este concurso ainda".
+ * - Se array vazio → redireciona pra landing pública do concurso.
  * Admin (owner/CRM) passa direto.
  */
 const ConcursoAccessGuard = ({ children }: { children: ReactNode }) => {
   const { concursoSlug } = useParams<{ concursoSlug: string }>();
-  const { accessibleConcursoSlug, loading } = useSubscription();
+  const { accessibleConcursoSlugs, loading } = useSubscription();
   const { canAccessAdmin, loading: adminLoading } = useAdmin();
   const { toast } = useToast();
 
-  const mismatched =
-    !loading && !adminLoading && !canAccessAdmin &&
-    accessibleConcursoSlug !== null &&
-    accessibleConcursoSlug !== concursoSlug;
+  const hasCurrent = !!concursoSlug && accessibleConcursoSlugs.includes(concursoSlug);
+  const hasOther = accessibleConcursoSlugs.length > 0 && !hasCurrent;
+  const mismatched = !loading && !adminLoading && !canAccessAdmin && hasOther;
 
   useEffect(() => {
     if (mismatched) {
       toast({
         title: 'Acesso restrito',
-        description: 'Você não tem acesso a este concurso.',
+        description: 'Você não tem acesso a este concurso ainda.',
         variant: 'destructive',
       });
     }
@@ -42,12 +42,12 @@ const ConcursoAccessGuard = ({ children }: { children: ReactNode }) => {
     return <>{children}</>;
   }
 
-  if (accessibleConcursoSlug === concursoSlug) {
+  if (hasCurrent) {
     return <>{children}</>;
   }
 
-  if (accessibleConcursoSlug !== null) {
-    return <Navigate to={`/c/${accessibleConcursoSlug}`} replace />;
+  if (accessibleConcursoSlugs.length > 0) {
+    return <Navigate to={`/c/${accessibleConcursoSlugs[0]}`} replace />;
   }
 
   // Sem acesso pago — manda pra landing pública do concurso (que tem CTA).

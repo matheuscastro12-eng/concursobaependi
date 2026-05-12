@@ -30,19 +30,18 @@ const DASHBOARD_CONCURSO_KEY = 'cai:dashboard:activeConcurso';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { hasAccess, status, planType, accessibleConcursoSlug, loading: subLoading } = useSubscription();
+  const { hasAccess, status, planType, accessibleConcursoSlugs, loading: subLoading } = useSubscription();
   const { canAccessAdmin } = useAdmin();
   const { selectedCargo, selectedCargoSlug, setSelectedCargoSlug } = useTrainingCargo();
   const { toast } = useToast();
-  const [paying, setPaying] = useState(false);
+  const [paying, setPaying] = useState<string | null>(null);
 
-  const allConcursos = listConcursos();
-  // Tabs ficam restritas ao concurso pago. Se admin/owner sem slug pago → todos.
-  const concursos = useMemo(() => {
-    if (canAccessAdmin && !accessibleConcursoSlug) return allConcursos;
-    if (!accessibleConcursoSlug) return allConcursos;
-    return allConcursos.filter((c) => c.slug === accessibleConcursoSlug);
-  }, [allConcursos, accessibleConcursoSlug, canAccessAdmin]);
+  // Mostra TODOS os concursos: os pagos vão normais, os não-pagos ganham cadeado
+  // e ao clicar disparam o fluxo de pagamento correspondente.
+  const concursos = listConcursos();
+
+  const hasAccessTo = (slug: string) => accessibleConcursoSlugs.includes(slug);
+  const firstAccessible = accessibleConcursoSlugs[0] ?? DEFAULT_CONCURSO_SLUG;
 
   const [activeConcursoSlug, setActiveConcursoSlug] = useState<string>(() => {
     if (typeof window === 'undefined') return DEFAULT_CONCURSO_SLUG;
@@ -54,12 +53,15 @@ const Dashboard = () => {
     window.localStorage.setItem(DASHBOARD_CONCURSO_KEY, activeConcursoSlug);
   }, [activeConcursoSlug]);
 
-  // Sincroniza tab ativa com o concurso que o user tem acesso.
+  // Se a tab ativa não é acessível mas o user tem outras, default = primeira acessível.
   useEffect(() => {
-    if (accessibleConcursoSlug && activeConcursoSlug !== accessibleConcursoSlug) {
-      setActiveConcursoSlug(accessibleConcursoSlug);
+    if (
+      accessibleConcursoSlugs.length > 0 &&
+      !accessibleConcursoSlugs.includes(activeConcursoSlug)
+    ) {
+      setActiveConcursoSlug(firstAccessible);
     }
-  }, [accessibleConcursoSlug, activeConcursoSlug]);
+  }, [accessibleConcursoSlugs, activeConcursoSlug, firstAccessible]);
 
   // Sem acesso e sem perfil admin → manda pra landing.
   useEffect(() => {
@@ -75,6 +77,7 @@ const Dashboard = () => {
     return <Navigate to="/" replace />;
   }
 
+  const hasAccessToActive = hasAccessTo(activeConcursoSlug) || canAccessAdmin;
   const activeConcurso =
     getConcursoBySlug(activeConcursoSlug) ?? getConcursoBySlug(DEFAULT_CONCURSO_SLUG)!;
   const cargos = activeConcurso.cargos;
@@ -98,19 +101,43 @@ const Dashboard = () => {
   const theme = getTheme(activeConcursoSlug);
 
   const handlePay = async () => {
-    if (!user?.email) return;
-    setPaying(true);
+    await handlePayForSlug(activeConcursoSlug);
+  };
+
+  // Dispara o fluxo de pagamento certo pra cada concurso.
+  // - 'baependi' → Stripe checkout (mesmo handler do Auth.tsx).
+  // - 'alagoa'  → página de PIX dedicada.
+  const handlePayForSlug = async (slug: string) => {
+    if (!user?.email) {
+      navigate(`/auth?mode=criar&concurso=${slug}`);
+      return;
+    }
+    if (slug === 'alagoa') {
+      navigate('/c/alagoa/pagamento');
+      return;
+    }
+    // Baependi (default): Stripe.
+    setPaying(slug);
     try {
       const url = await createStripeCheckoutSession({ userId: user.id, email: user.email });
       window.location.assign(url);
     } catch (err) {
-      setPaying(false);
+      setPaying(null);
       toast({
         title: 'Não conseguimos abrir o pagamento',
         description: err instanceof Error ? err.message : 'Tente novamente em alguns segundos.',
         variant: 'destructive',
       });
     }
+  };
+
+  // Click numa tab: se tem acesso → switch normal; senão → fluxo de compra.
+  const handleTabClick = (slug: string) => {
+    if (hasAccessTo(slug) || canAccessAdmin) {
+      setActiveConcursoSlug(slug);
+      return;
+    }
+    void handlePayForSlug(slug);
   };
 
   const userName = useMemo(() => {
@@ -129,17 +156,29 @@ const Dashboard = () => {
           <div className="inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-xs font-semibold">
             {concursos.map((c) => {
               const active = c.slug === activeConcursoSlug;
+              const locked = !hasAccessTo(c.slug) && !canAccessAdmin;
+              const busy = paying === c.slug;
               return (
                 <button
                   key={c.slug}
-                  onClick={() => setActiveConcursoSlug(c.slug)}
-                  className={`h-8 rounded-lg px-3.5 transition-all ${
+                  onClick={() => handleTabClick(c.slug)}
+                  disabled={busy}
+                  className={`inline-flex items-center gap-1.5 h-8 rounded-lg px-3.5 transition-all disabled:opacity-60 ${
                     active
                       ? `${theme.primaryBg} text-white shadow-sm`
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
-                  title={`${c.nome} — ${c.banca}`}
+                  title={
+                    locked
+                      ? `${c.nome} — clique pra liberar acesso`
+                      : `${c.nome} — ${c.banca}`
+                  }
                 >
+                  {locked && (busy ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <LockKeyhole className="h-3 w-3" />
+                  ))}
                   {c.municipio}
                 </button>
               );
@@ -208,19 +247,19 @@ const Dashboard = () => {
           <div className={`rounded-[28px] bg-gradient-to-br ${theme.gradient} p-7 sm:p-9 text-white shadow-[0_24px_80px_-28px_rgba(30,58,138,0.45)]`}>
             <p className="inline-flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.22em] text-amber-300 mb-4">
               <span className="w-7 h-px bg-amber-400" />
-              {hasAccess ? 'Acesso ativo' : 'Conta pronta'}
+              {hasAccessToActive ? 'Acesso ativo' : 'Conta pronta'}
             </p>
             <h1 className="font-['Manrope'] text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] leading-[1.02]">
               Bem-vindo, {userName}.
             </h1>
             <p className="mt-4 max-w-2xl text-sm sm:text-base text-white/80 leading-relaxed">
-              {hasAccess
+              {hasAccessToActive
                 ? `Seu acesso já está liberado. O foco agora é treinar para ${displayCargo.nome} com mais constância e menos dispersão.`
                 : `Sua conta já está pronta. Assim que o acesso for liberado, você vai treinar para ${displayCargo.nome} com tudo organizado.`}
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              {hasAccess ? (
+              {hasAccessToActive ? (
                 <button
                   onClick={() =>
                     navigate(`/c/${activeConcursoSlug}/exam?banca=${encodeURIComponent(editalInfo.banca)}&cargo=${encodeURIComponent(displayCargo.nome)}`)
@@ -233,11 +272,15 @@ const Dashboard = () => {
               ) : (
                 <button
                   onClick={() => void handlePay()}
-                  disabled={paying}
+                  disabled={paying !== null}
                   className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl text-sm font-extrabold bg-amber-400 text-slate-950 hover:bg-amber-300 transition-colors disabled:opacity-60"
                 >
                   {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
-                  {paying ? 'Abrindo pagamento…' : 'Liberar acesso · R$ 40/mês'}
+                  {paying
+                    ? 'Abrindo pagamento…'
+                    : activeConcursoSlug === 'alagoa'
+                      ? 'Liberar acesso · R$ 60 (PIX único)'
+                      : 'Liberar acesso · R$ 40/mês'}
                 </button>
               )}
               <button
@@ -315,7 +358,7 @@ const Dashboard = () => {
                 onClick={() =>
                   navigate(`/c/${activeConcursoSlug}/exam?banca=${encodeURIComponent(editalInfo.banca)}&cargo=${encodeURIComponent(displayCargo.nome)}`)
                 }
-                disabled={!hasAccess}
+                disabled={!hasAccessToActive}
                 className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-blue-700 text-white text-sm font-bold hover:bg-blue-800 transition-colors disabled:opacity-60"
               >
                 <Sparkles className="h-4 w-4 text-amber-300" />
@@ -374,11 +417,14 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {!hasAccess && (
+        {!hasAccessToActive && (
           <section className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5">
-            <p className="text-sm font-bold text-amber-900">Acesso em análise</p>
+            <p className="text-sm font-bold text-amber-900">
+              Você ainda não tem acesso a {activeConcurso.municipio}
+            </p>
             <p className="mt-2 text-sm text-amber-800 leading-relaxed">
-              Seu login já está ativo e o cargo para treino já pode ser escolhido. Assim que o pagamento for confirmado, o botão de gerar simulado e a área de treino serão liberados.
+              Para destravar os simulados e o treino deste concurso, libere o acesso pelo
+              botão acima. Você pode estudar para mais de um concurso ao mesmo tempo.
             </p>
           </section>
         )}

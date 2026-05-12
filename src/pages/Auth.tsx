@@ -156,6 +156,37 @@ const Auth = () => {
     );
   }
 
+  // Usuário já logado: se chegou em "criar conta" com um slug de concurso, isso
+  // significa que quer ADICIONAR acesso a um novo concurso. Não recria conta —
+  // dispara o fluxo de pagamento certo (Alagoa = página PIX, Baependi = Stripe).
+  // Importante: NÃO sobrescreve profile.concurso_slug — o acesso múltiplo vem
+  // de subscriptions + pix_payments.
+  if (user && mode === 'criar' && concursoSlugFromUrl) {
+    if (concursoSlugFromUrl === 'alagoa') {
+      return <Navigate to="/c/alagoa/pagamento" replace />;
+    }
+    // Baependi → dispara checkout Stripe inline.
+    if (concursoSlugFromUrl === 'baependi' && user.email) {
+      void (async () => {
+        try {
+          const url = await createStripeCheckoutSession({ userId: user.id, email: user.email! });
+          window.location.assign(url);
+        } catch (err) {
+          toast({
+            title: 'Não conseguimos abrir o pagamento',
+            description: err instanceof Error ? err.message : 'Tente novamente.',
+            variant: 'destructive',
+          });
+        }
+      })();
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-700" />
+        </div>
+      );
+    }
+  }
+
   if (user && mode !== 'redefinir') return <Navigate to={next} replace />;
 
   const handleLogin = async (event: React.FormEvent) => {

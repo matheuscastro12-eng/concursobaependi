@@ -82,6 +82,7 @@ type CRMUser = {
   isAdmin: boolean;
   concursoSlug: string;
   hasLifetimeAccess: boolean;
+  accessSlugs: string[];
 };
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -153,14 +154,31 @@ const CRM = () => {
       }
     }
 
+    // Indexa PIX confirmados por user → conjunto de concurso_slug.
+    const confirmedPixByUser = new Map<string, Set<string>>();
+    for (const pix of pixPayments) {
+      if (pix.status !== 'confirmed') continue;
+      if (!confirmedPixByUser.has(pix.user_id)) confirmedPixByUser.set(pix.user_id, new Set());
+      confirmedPixByUser.get(pix.user_id)!.add(pix.concurso_slug);
+    }
+
     return profiles.map((profile) => {
       const subscription = subscriptionMap.get(profile.user_id);
       const latestPayment = latestPaymentMap.get(profile.user_id) ?? null;
-      const hasAccess = subscription?.status === 'active';
+      const stripeActive = subscription?.status === 'active';
 
       const concursoSlug = profile.concurso_slug ?? 'baependi';
       const hasLifetime = Boolean(profile.has_lifetime_access);
-      const computedAccess = hasAccess || hasLifetime;
+
+      // Acessos efetivos: Stripe → baependi, cada PIX confirmado → seu slug,
+      // retrocompat (lifetime + concurso_slug do profile).
+      const accessSet = new Set<string>();
+      if (stripeActive) accessSet.add('baependi');
+      const pixSet = confirmedPixByUser.get(profile.user_id);
+      if (pixSet) pixSet.forEach((s) => accessSet.add(s));
+      if (hasLifetime && concursoSlug) accessSet.add(concursoSlug);
+      const accessSlugs = Array.from(accessSet);
+      const computedAccess = accessSlugs.length > 0;
 
       return {
         userId: profile.user_id,
@@ -176,9 +194,10 @@ const CRM = () => {
         isAdmin: adminSet.has(profile.user_id),
         concursoSlug,
         hasLifetimeAccess: hasLifetime,
+        accessSlugs,
       };
     });
-  }, [payments, profiles, roles, subscriptions]);
+  }, [payments, profiles, roles, subscriptions, pixPayments]);
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -197,8 +216,13 @@ const CRM = () => {
         (accessFilter === 'com-acesso' && item.hasAccess) ||
         (accessFilter === 'sem-acesso' && !item.hasAccess);
 
+      // Filtro mostra usuários que TÊM ACESSO ao concurso (não apenas o slug
+      // inicial do cadastro). Fallback: se nunca teve acesso a nenhum, ainda
+      // aparece no filtro do concurso de cadastro pra não sumir do CRM.
       const matchesConcurso =
-        concursoFilter === 'todos' || item.concursoSlug === concursoFilter;
+        concursoFilter === 'todos' ||
+        item.accessSlugs.includes(concursoFilter) ||
+        (item.accessSlugs.length === 0 && item.concursoSlug === concursoFilter);
 
       return matchesSearch && matchesPayment && matchesAccess && matchesConcurso;
     });
@@ -560,7 +584,12 @@ const CRM = () => {
                             Admin
                           </span>
                         )}
-                        <ConcursoBadge slug={entry.concursoSlug} />
+                        {entry.accessSlugs.length > 0 ? (
+                          entry.accessSlugs.map((s) => <ConcursoBadge key={s} slug={s} />)
+                        ) : (
+                          // Sem acessos ainda — mostra o slug do cadastro como referência.
+                          <ConcursoBadge slug={entry.concursoSlug} muted />
+                        )}
                       </div>
                       <p className="mt-1 text-sm text-slate-600">{entry.email}</p>
                     </div>
@@ -682,15 +711,17 @@ function labelPaymentStatus(status: string) {
   return 'Sem comprovante';
 }
 
-function ConcursoBadge({ slug }: { slug: string }) {
+function ConcursoBadge({ slug, muted = false }: { slug: string; muted?: boolean }) {
   const isAlagoa = slug === 'alagoa';
   const label = isAlagoa ? 'Alagoa' : 'Baependi';
-  const tone = isAlagoa
-    ? 'bg-amber-50 text-amber-700 border-amber-200'
-    : 'bg-blue-50 text-blue-700 border-blue-200';
+  const tone = muted
+    ? 'bg-slate-50 text-slate-500 border-slate-200 border-dashed'
+    : isAlagoa
+      ? 'bg-amber-50 text-amber-700 border-amber-200'
+      : 'bg-blue-50 text-blue-700 border-blue-200';
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${tone}`}>
-      {label}
+      {muted ? `${label} (cadastro)` : label}
     </span>
   );
 }
