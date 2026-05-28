@@ -215,6 +215,10 @@ const Exam = () => {
                     isComplete={isComplete}
                     banca={config.banca}
                     cargo={config.cargo}
+                    concursoSlug={concursoSlug}
+                    cargoSlug={searchParams.get('cargoSlug') ?? undefined}
+                    nivel={config.nivel}
+                    studyTema={tema}
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-6 max-w-md mx-auto cai-fade-in">

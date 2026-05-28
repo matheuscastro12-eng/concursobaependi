@@ -6,9 +6,9 @@ export default {
   // Classes vindas de strings dinâmicas em src/lib/concursoTheme.ts —
   // safelistadas pra o JIT não purgar.
   safelist: [
-    'bg-blue-700', 'hover:bg-blue-800', 'text-blue-700', 'hover:border-blue-500/40',
+    'bg-blue-700', 'hover:bg-blue-800', 'text-blue-700', 'hover:text-blue-700', 'hover:border-blue-500/40',
     'hover:shadow-[0_12px_32px_-12px_rgba(37,99,235,0.20)]',
-    'bg-emerald-700', 'hover:bg-emerald-800', 'text-emerald-700', 'hover:border-emerald-500/40',
+    'bg-emerald-700', 'hover:bg-emerald-800', 'text-emerald-700', 'hover:text-emerald-700', 'hover:border-emerald-500/40',
     'hover:shadow-[0_12px_32px_-12px_rgba(16,185,129,0.20)]',
     'from-[#0F172A]', 'via-[#1E3A8A]', 'to-[#2563EB]',
     'from-[#052e2b]', 'via-[#065f46]', 'to-[#10b981]',

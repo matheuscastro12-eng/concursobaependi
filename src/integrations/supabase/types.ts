@@ -589,6 +589,60 @@ export type Database = {
         }
         Relationships: []
       }
+      question_attempts: {
+        Row: {
+          alternativas: Json
+          answered_at: string
+          banca: string | null
+          cargo_slug: string | null
+          chosen_answer: string | null
+          concurso_slug: string
+          correct_answer: string
+          enunciado: string
+          explanation: string | null
+          id: string
+          is_correct: boolean
+          nivel: string | null
+          question_hash: string
+          tema: string | null
+          user_id: string
+        }
+        Insert: {
+          alternativas?: Json
+          answered_at?: string
+          banca?: string | null
+          cargo_slug?: string | null
+          chosen_answer?: string | null
+          concurso_slug?: string
+          correct_answer: string
+          enunciado: string
+          explanation?: string | null
+          id?: string
+          is_correct: boolean
+          nivel?: string | null
+          question_hash: string
+          tema?: string | null
+          user_id: string
+        }
+        Update: {
+          alternativas?: Json
+          answered_at?: string
+          banca?: string | null
+          cargo_slug?: string | null
+          chosen_answer?: string | null
+          concurso_slug?: string
+          correct_answer?: string
+          enunciado?: string
+          explanation?: string | null
+          id?: string
+          is_correct?: boolean
+          nivel?: string | null
+          question_hash?: string
+          tema?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       question_bank: {
         Row: {
           alternativas: Json
@@ -669,6 +723,69 @@ export type Database = {
           },
         ]
       }
+      review_queue: {
+        Row: {
+          alternativas: Json
+          banca: string | null
+          box: number
+          cargo_slug: string | null
+          concurso_slug: string
+          correct_answer: string
+          created_at: string
+          enunciado: string
+          explanation: string | null
+          last_result: boolean | null
+          next_review_at: string
+          nivel: string | null
+          question_hash: string
+          tema: string | null
+          times_correct: number
+          times_seen: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alternativas?: Json
+          banca?: string | null
+          box?: number
+          cargo_slug?: string | null
+          concurso_slug?: string
+          correct_answer: string
+          created_at?: string
+          enunciado: string
+          explanation?: string | null
+          last_result?: boolean | null
+          next_review_at?: string
+          nivel?: string | null
+          question_hash: string
+          tema?: string | null
+          times_correct?: number
+          times_seen?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alternativas?: Json
+          banca?: string | null
+          box?: number
+          cargo_slug?: string | null
+          concurso_slug?: string
+          correct_answer?: string
+          created_at?: string
+          enunciado?: string
+          explanation?: string | null
+          last_result?: boolean | null
+          next_review_at?: string
+          nivel?: string | null
+          question_hash?: string
+          tema?: string | null
+          times_correct?: number
+          times_seen?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           access_expires_at: string | null
@@ -744,8 +861,13 @@ export type Database = {
     }
     Functions: {
       count_coupon_usage: { Args: { _code: string }; Returns: number }
+      grade_review: {
+        Args: { _got_it: boolean; _question_hash: string }
+        Returns: undefined
+      }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       landing_stats: { Args: never; Returns: Json }
+      leitner_interval: { Args: { _box: number }; Returns: string }
       mark_questions_seen: { Args: { _ids: string[] }; Returns: undefined }
       pick_questions:
         | {
@@ -812,6 +934,10 @@ export type Database = {
             }
           }
       question_bank_summary: { Args: never; Returns: Json }
+      record_attempts: {
+        Args: { _attempts: Json; _concurso_slug: string }
+        Returns: undefined
+      }
       save_questions_to_bank: { Args: { _questions: Json }; Returns: number }
       track_pageview: {
         Args: {
@@ -823,6 +949,39 @@ export type Database = {
         Returns: undefined
       }
       traffic_summary: { Args: { _days?: number }; Returns: Json }
+      user_performance_summary: {
+        Args: { _concurso_slug: string }
+        Returns: Json
+      }
+      wrong_questions_for_review: {
+        Args: { _concurso_slug: string; _limit?: number }
+        Returns: {
+          alternativas: Json
+          banca: string | null
+          box: number
+          cargo_slug: string | null
+          concurso_slug: string
+          correct_answer: string
+          created_at: string
+          enunciado: string
+          explanation: string | null
+          last_result: boolean | null
+          next_review_at: string
+          nivel: string | null
+          question_hash: string
+          tema: string | null
+          times_correct: number
+          times_seen: number
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "review_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       app_role: "admin"
@@ -960,4 +1119,3 @@ export const Constants = {
     },
   },
 } as const
-<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />

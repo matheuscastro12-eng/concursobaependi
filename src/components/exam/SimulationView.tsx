@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import PostSimulationFeedback from '@/components/exam/PostSimulationFeedback';
 import QuestionDoubt from '@/components/exam/QuestionDoubt';
+import { recordAttempts, type AttemptInput } from '@/lib/attempts';
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Trophy, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface ParsedQuestion {
@@ -24,6 +25,10 @@ interface SimulationViewProps {
   isComplete?: boolean;
   banca?: string;
   cargo?: string;
+  concursoSlug?: string;
+  cargoSlug?: string;
+  nivel?: string;
+  studyTema?: string;
 }
 
 function parseQuestions(markdown: string): ParsedQuestion[] {
@@ -81,13 +86,14 @@ function parseQuestions(markdown: string): ParsedQuestion[] {
   return questions;
 }
 
-const SimulationView = ({ resultado, onExit, isGenerating = false, isComplete = true, banca, cargo }: SimulationViewProps) => {
+const SimulationView = ({ resultado, onExit, isGenerating = false, isComplete = true, banca, cargo, concursoSlug = 'baependi', cargoSlug, nivel, studyTema }: SimulationViewProps) => {
   const navigate = useNavigate();
   const questions = useMemo(() => parseQuestions(resultado), [resultado]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [revealedQuestions, setRevealedQuestions] = useState<Set<number>>(new Set());
+  const recordedRef = useRef(false);
 
   const currentQ = questions[currentIndex];
   const totalQuestions = questions.length;
@@ -109,13 +115,39 @@ const SimulationView = ({ resultado, onExit, isGenerating = false, isComplete = 
     });
   }, [currentIndex]);
 
-  const finishExam = useCallback(() => setShowResults(true), []);
+  const finishExam = useCallback(() => {
+    setShowResults(true);
+    // Persiste as respostas (best-effort) — alimenta Desempenho + Revisão.
+    if (!recordedRef.current) {
+      recordedRef.current = true;
+      const payload: AttemptInput[] = [];
+      for (let i = 0; i < questions.length; i++) {
+        const chosen = answers[i];
+        if (!chosen) continue; // só registra respondidas
+        const q = questions[i];
+        payload.push({
+          tema: q.tema || studyTema || undefined,
+          cargo_slug: cargoSlug,
+          banca,
+          nivel,
+          enunciado: q.enunciado,
+          alternativas: q.alternatives,
+          correct_answer: q.correctAnswer,
+          chosen_answer: chosen,
+          is_correct: chosen === q.correctAnswer,
+          explanation: q.explanation || undefined,
+        });
+      }
+      if (payload.length) void recordAttempts(concursoSlug, payload);
+    }
+  }, [answers, questions, banca, cargo, cargoSlug, nivel, studyTema, concursoSlug]);
 
   const resetExam = useCallback(() => {
     setCurrentIndex(0);
     setAnswers({});
     setShowResults(false);
     setRevealedQuestions(new Set());
+    recordedRef.current = false;
   }, []);
 
   const score = useMemo(() => {
@@ -179,9 +211,9 @@ const SimulationView = ({ resultado, onExit, isGenerating = false, isComplete = 
         <PostSimulationFeedback
           score={score}
           wrongTopics={wrongTopics}
-          onGoToFlashcards={() => navigate('/flashcards')}
-          onGoToTopics={() => navigate('/flashcards')}
-          onGoToEvolution={() => navigate('/profile')}
+          onGoToFlashcards={() => navigate(`/c/${concursoSlug}/revisao`)}
+          onGoToTopics={() => navigate(`/c/${concursoSlug}/revisao`)}
+          onGoToEvolution={() => navigate(`/c/${concursoSlug}/desempenho`)}
           onRetry={resetExam}
           onExit={onExit}
         />

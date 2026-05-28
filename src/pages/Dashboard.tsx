@@ -2,14 +2,17 @@ import { useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
+  BarChart3,
   BookOpenCheck,
   Building2,
   CheckCircle2,
   Clock3,
   FileText,
+  Flame,
   GraduationCap,
   LayoutDashboard,
   LockKeyhole,
+  RefreshCw,
   Sparkles,
   Target,
 } from 'lucide-react';
@@ -24,6 +27,7 @@ import { createStripeCheckoutSession } from '@/lib/paymentSubmissions';
 import { Loader2 } from 'lucide-react';
 import logoColor from '@/assets/logo-concursos.svg';
 import { getTheme } from '@/lib/concursoTheme';
+import { fetchPerformanceSummary, type PerformanceSummary } from '@/lib/attempts';
 
 const DASHBOARD_CONCURSO_KEY = 'cai:dashboard:activeConcurso';
 
@@ -73,9 +77,6 @@ const Dashboard = () => {
       });
     }
   }, [subLoading, hasAccess, canAccessAdmin, toast]);
-  if (!subLoading && !hasAccess && !canAccessAdmin) {
-    return <Navigate to="/" replace />;
-  }
 
   const hasAccessToActive = hasAccessTo(activeConcursoSlug) || canAccessAdmin;
   const activeConcurso =
@@ -99,6 +100,27 @@ const Dashboard = () => {
   }, [activeConcursoSlug]);
   const displayCargo = visibleCargo ?? selectedCargo;
   const theme = getTheme(activeConcursoSlug);
+
+  // Resumo de desempenho do concurso ativo — alimenta os widgets de aluno.
+  // Só busca pra slugs com acesso (RPC é best-effort e nunca lança).
+  const [perf, setPerf] = useState<PerformanceSummary | null>(null);
+  useEffect(() => {
+    if (!hasAccessToActive) {
+      setPerf(null);
+      return;
+    }
+    let cancelled = false;
+    setPerf(null);
+    fetchPerformanceSummary(activeConcursoSlug).then((data) => {
+      if (!cancelled) setPerf(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeConcursoSlug, hasAccessToActive]);
+
+  const perfAccuracy =
+    perf && perf.total > 0 ? Math.round((perf.correct / perf.total) * 100) : 0;
 
   const handlePay = async () => {
     await handlePayForSlug(activeConcursoSlug);
@@ -148,6 +170,11 @@ const Dashboard = () => {
     () => cargos.filter((cargo) => cargo.slug !== displayCargo.slug).slice(0, 6),
     [displayCargo.slug],
   );
+
+  // Guard de acesso DEPOIS de todos os hooks (evita "rendered fewer hooks").
+  if (!subLoading && !hasAccess && !canAccessAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -308,6 +335,86 @@ const Dashboard = () => {
             ))}
           </div>
         </section>
+
+        {hasAccessToActive && (
+          <section className="grid sm:grid-cols-2 gap-4">
+            {/* Meu desempenho */}
+            <button
+              onClick={() => navigate(`/c/${activeConcursoSlug}/desempenho`)}
+              className={`group text-left rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all ${theme.borderHover} ${theme.shadowHover} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400`}
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className={`w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center transition-transform group-hover:scale-110`}>
+                  <BarChart3 className={`w-5 h-5 ${theme.iconColor}`} />
+                </div>
+                <ArrowRight className={`w-5 h-5 text-slate-300 transition-transform group-hover:translate-x-0.5 ${theme.textHighlight.replace('text-', 'group-hover:text-')}`} />
+              </div>
+              <p className="font-['Manrope'] text-lg font-extrabold tracking-tight text-slate-950">
+                Meu desempenho
+              </p>
+              {perf && perf.total > 0 ? (
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                  <span className="inline-flex items-baseline gap-1">
+                    <span className={`font-['Manrope'] text-2xl font-extrabold ${theme.textHighlight}`}>
+                      {perfAccuracy}%
+                    </span>
+                    <span className="text-xs text-slate-500">acerto</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700">
+                    <Flame className="w-4 h-4 text-orange-500" />
+                    {perf.streak} {perf.streak === 1 ? 'dia' : 'dias'}
+                  </span>
+                  <span className="text-sm text-slate-500">
+                    <strong className="text-slate-700">{perf.total}</strong> respondidas
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500">
+                  Faça um simulado pra ver seus acertos por matéria e sua evolução.
+                </p>
+              )}
+            </button>
+
+            {/* Revisão de erros */}
+            <button
+              onClick={() => navigate(`/c/${activeConcursoSlug}/revisao`)}
+              className={`group text-left rounded-2xl border bg-white p-5 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500 ${
+                perf && perf.review_due > 0
+                  ? 'border-amber-300 bg-amber-50/40 hover:border-amber-400'
+                  : `border-slate-200 ${theme.borderHover} ${theme.shadowHover}`
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                    perf && perf.review_due > 0 ? 'bg-amber-100' : 'bg-slate-50'
+                  }`}
+                >
+                  <RefreshCw
+                    className={`w-5 h-5 ${
+                      perf && perf.review_due > 0 ? 'text-amber-600' : theme.iconColor
+                    }`}
+                  />
+                </div>
+                {perf && perf.review_due > 0 ? (
+                  <span className="inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-full bg-amber-500 text-white text-xs font-extrabold">
+                    {perf.review_due}
+                  </span>
+                ) : (
+                  <ArrowRight className="w-5 h-5 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+                )}
+              </div>
+              <p className="font-['Manrope'] text-lg font-extrabold tracking-tight text-slate-950">
+                Revisão de erros
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                {perf && perf.review_due > 0
+                  ? `Você tem ${perf.review_due} ${perf.review_due === 1 ? 'questão' : 'questões'} pra revisar agora.`
+                  : 'Revise no momento certo as questões que você errou.'}
+              </p>
+            </button>
+          </section>
+        )}
 
         <section className="grid md:grid-cols-3 gap-4">
           {[

@@ -38,6 +38,7 @@ const CargoDetalhe = () => {
       tema: materiaNome,
       banca: concurso.banca,
       cargo: cargo.nome,
+      cargoSlug: cargo.slug,
     });
     navigate(`/c/${concursoSlug}/exam?${params.toString()}`);
   };
@@ -47,6 +48,7 @@ const CargoDetalhe = () => {
       tema: `Conhecimentos gerais e específicos do cargo de ${cargo.nome}`,
       banca: concurso.banca,
       cargo: cargo.nome,
+      cargoSlug: cargo.slug,
     });
     navigate(`/c/${concursoSlug}/exam?${params.toString()}`);
   };

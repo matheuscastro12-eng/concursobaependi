@@ -23,6 +23,8 @@ const Auth = lazy(() => import("./pages/Auth"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const PaymentAlagoa = lazy(() => import("./pages/PaymentAlagoa"));
+const Desempenho = lazy(() => import("./pages/Desempenho"));
+const Revisao = lazy(() => import("./pages/Revisao"));
 
 const queryClient = new QueryClient();
 
@@ -75,6 +77,26 @@ const App = () => (
                   <AccessRoute>
                     <ConcursoAccessGuard>
                       <Exam />
+                    </ConcursoAccessGuard>
+                  </AccessRoute>
+                }
+              />
+              <Route
+                path="/c/:concursoSlug/desempenho"
+                element={
+                  <AccessRoute>
+                    <ConcursoAccessGuard>
+                      <Desempenho />
+                    </ConcursoAccessGuard>
+                  </AccessRoute>
+                }
+              />
+              <Route
+                path="/c/:concursoSlug/revisao"
+                element={
+                  <AccessRoute>
+                    <ConcursoAccessGuard>
+                      <Revisao />
                     </ConcursoAccessGuard>
                   </AccessRoute>
                 }
