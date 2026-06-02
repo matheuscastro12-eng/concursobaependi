@@ -598,6 +598,7 @@ const CRM = () => {
           summary={aiSummary}
           history={aiHistory}
           concursoFilter={concursoFilter}
+          search={search}
         />
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -854,15 +855,49 @@ function AiHistorySection({
   summary,
   history,
   concursoFilter,
+  search,
 }: {
   summary: AiSummary | null;
   history: AiCallRow[];
   concursoFilter: 'todos' | 'baependi' | 'alagoa';
+  search: string;
 }) {
-  const rows =
-    concursoFilter === 'todos'
-      ? history
-      : history.filter((r) => (r.concurso_slug ?? 'baependi') === concursoFilter);
+  const [view, setView] = useState<'timeline' | 'byUser'>('timeline');
+  const term = search.trim().toLowerCase();
+
+  const rows = history.filter((r) => {
+    const matchConcurso =
+      concursoFilter === 'todos' || (r.concurso_slug ?? 'baependi') === concursoFilter;
+    const matchSearch =
+      !term ||
+      (r.full_name ?? '').toLowerCase().includes(term) ||
+      (r.email ?? '').toLowerCase().includes(term);
+    return matchConcurso && matchSearch;
+  });
+
+  // Agregado por aluno (a partir das linhas filtradas).
+  const byUser = (() => {
+    const map = new Map<
+      string,
+      { userId: string; name: string; email: string; total: number; ia: number; last: string }
+    >();
+    for (const r of rows) {
+      const k = r.user_id;
+      const cur = map.get(k) ?? {
+        userId: k,
+        name: r.full_name || 'Sem nome',
+        email: r.email || '',
+        total: 0,
+        ia: 0,
+        last: r.created_at,
+      };
+      cur.total += 1;
+      if (r.source === 'ia') cur.ia += 1;
+      if (r.created_at > cur.last) cur.last = r.created_at;
+      map.set(k, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  })();
 
   const cards: [string, string, string][] = [
     ['Chamadas totais', String(summary?.total ?? 0), 'text-slate-900'],
@@ -874,15 +909,35 @@ function AiHistorySection({
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Sparkles className="h-5 w-5 text-blue-700" />
         <h2 className="font-['Manrope'] text-lg font-extrabold text-slate-950">
           Histórico de IA
         </h2>
-        <span className="ml-1 text-xs text-slate-400">
+        <span className="ml-1 text-xs text-slate-400 hidden sm:inline">
           chamadas de geração e tutor
         </span>
+        {/* Toggle de visão: linha do tempo × por aluno */}
+        <div className="ml-auto inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+          {(['timeline', 'byUser'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3 h-8 rounded-lg transition-all ${
+                view === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {v === 'timeline' ? 'Linha do tempo' : 'Por aluno'}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {term && (
+        <p className="mb-3 text-xs text-slate-500">
+          Filtrando por <span className="font-semibold text-slate-700">"{search}"</span> — {rows.length} chamada{rows.length !== 1 ? 's' : ''}.
+        </p>
+      )}
 
       {/* Resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
@@ -899,8 +954,44 @@ function AiHistorySection({
       {/* Tabela de histórico */}
       {rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-          Nenhuma chamada de IA registrada ainda
-          {concursoFilter !== 'todos' ? ' para este concurso.' : '.'}
+          {term
+            ? `Nenhuma chamada de IA encontrada para "${search}".`
+            : concursoFilter !== 'todos'
+              ? 'Nenhuma chamada de IA registrada para este concurso ainda.'
+              : 'Nenhuma chamada de IA registrada ainda. Clique em "Atualizar" após gerar um simulado.'}
+        </div>
+      ) : view === 'byUser' ? (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                <th className="py-2 pr-3">Aluno</th>
+                <th className="py-2 pr-3">Chamadas</th>
+                <th className="py-2 pr-3">IA (custo)</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Último uso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byUser.map((u) => (
+                <tr key={u.userId} className="border-b border-slate-50 hover:bg-slate-50/60">
+                  <td className="py-2.5 pr-3">
+                    <p className="font-semibold text-slate-800 truncate max-w-[220px]">{u.name}</p>
+                    <p className="text-[11px] text-slate-400 truncate max-w-[220px]">{u.email}</p>
+                  </td>
+                  <td className="py-2.5 pr-3 font-bold text-slate-900">{u.total}</td>
+                  <td className="py-2.5 pr-3">
+                    <span className={u.ia > 0 ? 'font-bold text-amber-700' : 'text-slate-400'}>{u.ia}</span>
+                  </td>
+                  <td className="py-2.5 pr-3 text-[12px] text-slate-500 whitespace-nowrap">
+                    {dateTime.format(new Date(u.last))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-3 text-[11px] text-slate-400">
+            {byUser.length} aluno{byUser.length !== 1 ? 's' : ''} · use a busca no topo da página pra filtrar por nome/email.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto -mx-1">
