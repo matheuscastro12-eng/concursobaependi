@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { logAiCall } from '@/lib/aiLog';
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_DIRECT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
@@ -117,9 +119,15 @@ export const useQuestionAssistant = () => {
 
       try {
         const url = useProxy ? GEMINI_PROXY : `${GEMINI_DIRECT}&key=${apiKey}`;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (useProxy) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+        }
+        void logAiCall({ feature: 'assistant', source: 'ia', meta: { tema: ctx.tema, banca: ctx.banca, cargo: ctx.cargo } });
         const response = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           signal: controller.signal,
           body: JSON.stringify({
             contents: geminiContents,

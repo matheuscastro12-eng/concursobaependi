@@ -8,6 +8,7 @@ import {
   Mail,
   Search,
   ShieldCheck,
+  Sparkles,
   UserCheck,
   UserX,
   Wallet,
@@ -85,8 +86,38 @@ type CRMUser = {
   accessSlugs: string[];
 };
 
+type AiCallRow = {
+  id: string;
+  created_at: string;
+  feature: string;
+  source: string | null;
+  concurso_slug: string | null;
+  meta: Record<string, unknown> | null;
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+};
+
+type AiSummary = {
+  total: number;
+  today: number;
+  last_7d: number;
+  ia_calls: number;
+  ia_today: number;
+  by_feature: { feature: string; cnt: number }[];
+  by_source: { source: string; cnt: number }[];
+  by_concurso: { concurso_slug: string; cnt: number }[];
+  by_day: { day: string; total: number; ia: number }[];
+};
+
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const dateTime = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+const FEATURE_LABEL: Record<string, string> = {
+  exam: 'Simulado',
+  assistant: 'Tutor IA',
+  explain: 'Explicação',
+};
 
 const CRM = () => {
   const navigate = useNavigate();
@@ -105,18 +136,22 @@ const CRM = () => {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [pixPayments, setPixPayments] = useState<PixPaymentRow[]>([]);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
+  const [aiHistory, setAiHistory] = useState<AiCallRow[]>([]);
 
   const load = async (showSpinner = true) => {
     if (!canAccessAdmin) return;
     if (showSpinner) setLoading(true);
     else setRefreshing(true);
 
-    const [profilesRes, subscriptionsRes, paymentsRes, rolesRes, pixRes] = await Promise.all([
+    const [profilesRes, subscriptionsRes, paymentsRes, rolesRes, pixRes, aiSummaryRes, aiHistRes] = await Promise.all([
       (supabase as any).from('profiles').select('user_id,email,full_name,created_at,concurso_slug,has_lifetime_access').order('created_at', { ascending: false }),
       supabase.from('subscriptions').select('user_id,status,plan_type,access_expires_at,updated_at'),
       supabase.from('payment_submissions').select('id,user_id,email,full_name,amount_cents,proof_storage_path,proof_file_name,status,review_notes,created_at,updated_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id,role'),
       (supabase as any).from('pix_payments').select('id,user_id,concurso_slug,valor_centavos,status,comprovante_url,confirmed_at,confirmed_by,created_at').order('created_at', { ascending: false }),
+      (supabase as any).rpc('ai_usage_summary'),
+      (supabase as any).rpc('ai_call_history', { _limit: 200, _concurso_slug: null }),
     ]);
 
     const firstError = profilesRes.error || subscriptionsRes.error || paymentsRes.error || rolesRes.error || pixRes.error;
@@ -133,6 +168,9 @@ const CRM = () => {
       setPayments((paymentsRes.data as PaymentRow[]) ?? []);
       setRoles((rolesRes.data as RoleRow[]) ?? []);
       setPixPayments((pixRes.data as PixPaymentRow[]) ?? []);
+      // RPCs de IA são best-effort — se falharem, não derrubam o CRM.
+      if (!aiSummaryRes?.error && aiSummaryRes?.data) setAiSummary(aiSummaryRes.data as AiSummary);
+      if (!aiHistRes?.error && Array.isArray(aiHistRes?.data)) setAiHistory(aiHistRes.data as AiCallRow[]);
     }
 
     setLoading(false);
@@ -555,6 +593,13 @@ const CRM = () => {
           </section>
         )}
 
+        {/* ── Histórico de chamadas de IA ─────────────────────────── */}
+        <AiHistorySection
+          summary={aiSummary}
+          history={aiHistory}
+          concursoFilter={concursoFilter}
+        />
+
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="mb-3 inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
             {(['todos', 'baependi', 'alagoa'] as const).map((slug) => (
@@ -780,7 +825,139 @@ function labelPaymentStatus(status: string) {
   return 'Sem comprovante';
 }
 
-function ConcursoBadge({ slug, muted = false }: { slug: string; muted?: boolean }) {
+function SourceBadge({ source }: { source: string | null }) {
+  if (source === 'ia') {
+    return (
+      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10.5px] font-bold text-amber-700">
+        IA · custo
+      </span>
+    );
+  }
+  if (source === 'bank') {
+    return (
+      <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10.5px] font-bold text-blue-700">
+        Banco · grátis
+      </span>
+    );
+  }
+  if (source === 'cache') {
+    return (
+      <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10.5px] font-bold text-slate-500">
+        Cache · grátis
+      </span>
+    );
+  }
+  return <span className="text-[10.5px] text-slate-400">—</span>;
+}
+
+function AiHistorySection({
+  summary,
+  history,
+  concursoFilter,
+}: {
+  summary: AiSummary | null;
+  history: AiCallRow[];
+  concursoFilter: 'todos' | 'baependi' | 'alagoa';
+}) {
+  const rows =
+    concursoFilter === 'todos'
+      ? history
+      : history.filter((r) => (r.concurso_slug ?? 'baependi') === concursoFilter);
+
+  const cards: [string, string, string][] = [
+    ['Chamadas totais', String(summary?.total ?? 0), 'text-slate-900'],
+    ['Hoje', String(summary?.today ?? 0), 'text-slate-900'],
+    ['Últimos 7 dias', String(summary?.last_7d ?? 0), 'text-slate-900'],
+    ['IA (custo) — total', String(summary?.ia_calls ?? 0), 'text-amber-700'],
+    ['IA hoje', String(summary?.ia_today ?? 0), 'text-amber-700'],
+  ];
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="mb-4 flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-blue-700" />
+        <h2 className="font-['Manrope'] text-lg font-extrabold text-slate-950">
+          Histórico de IA
+        </h2>
+        <span className="ml-1 text-xs text-slate-400">
+          chamadas de geração e tutor
+        </span>
+      </div>
+
+      {/* Resumo */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+        {cards.map(([label, value, color]) => (
+          <div key={label} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+            <p className={`mt-0.5 font-['Manrope'] text-2xl font-extrabold tracking-tight ${color}`}>
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabela de histórico */}
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+          Nenhuma chamada de IA registrada ainda
+          {concursoFilter !== 'todos' ? ' para este concurso.' : '.'}
+        </div>
+      ) : (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                <th className="py-2 pr-3">Aluno</th>
+                <th className="py-2 pr-3">Tipo</th>
+                <th className="py-2 pr-3">Origem</th>
+                <th className="py-2 pr-3">Concurso</th>
+                <th className="py-2 pr-3">Tema</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Quando</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 100).map((r) => {
+                const tema = (r.meta?.tema as string | undefined) ?? '—';
+                return (
+                  <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60">
+                    <td className="py-2.5 pr-3">
+                      <p className="font-semibold text-slate-800 truncate max-w-[180px]">
+                        {r.full_name || 'Sem nome'}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate max-w-[180px]">{r.email}</p>
+                    </td>
+                    <td className="py-2.5 pr-3 text-slate-700">
+                      {FEATURE_LABEL[r.feature] ?? r.feature}
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      <SourceBadge source={r.source} />
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      {r.concurso_slug ? <ConcursoBadge slug={r.concurso_slug} /> : <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="py-2.5 pr-3 text-slate-600 truncate max-w-[220px]" title={tema}>
+                      {tema}
+                    </td>
+                    <td className="py-2.5 pr-3 text-[12px] text-slate-500 whitespace-nowrap">
+                      {dateTime.format(new Date(r.created_at))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {rows.length > 100 && (
+            <p className="mt-3 text-center text-xs text-slate-400">
+              Mostrando as 100 mais recentes de {rows.length}.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function ConcursoBadge({ slug, muted = false }: { slug: string; muted?: boolean }) {
   const isAlagoa = slug === 'alagoa';
   const label = isAlagoa ? 'Alagoa' : 'Baependi';
   const tone = muted

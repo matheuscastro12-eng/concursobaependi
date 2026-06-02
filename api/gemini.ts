@@ -10,17 +10,29 @@ const GEMINI_MODEL = 'gemini-2.5-flash';
 const UPSTREAM = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
 
 export default async function handler(req: Request): Promise<Response> {
+  const origin = req.headers.get('origin');
+
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: corsHeaders(),
+      headers: corsHeaders(origin),
     });
   }
 
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { 'Content-Type': 'application/json', ...corsHeaders() } }
+      { status: 405, headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } }
+    );
+  }
+
+  // ── Auth: só usuários logados podem usar o proxy (evita roubo de quota).
+  // Sem isso, qualquer um na internet poderia POSTar aqui e gastar a key.
+  const auth = await authenticate(req);
+  if (!auth.ok) {
+    return new Response(
+      JSON.stringify({ error: 'unauthorized', message: 'Faça login para usar a IA.' }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } }
     );
   }
 
@@ -29,7 +41,7 @@ export default async function handler(req: Request): Promise<Response> {
   if (!apiKey) {
     return new Response(
       JSON.stringify({ error: 'GOOGLE_AI_API_KEY not configured on server' }),
-      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders() } }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } }
     );
   }
 
@@ -39,7 +51,7 @@ export default async function handler(req: Request): Promise<Response> {
   } catch {
     return new Response(
       JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() } }
+      { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } }
     );
   }
 
@@ -91,7 +103,7 @@ export default async function handler(req: Request): Promise<Response> {
       }),
       {
         status: 503,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
       }
     );
   }
@@ -102,15 +114,53 @@ export default async function handler(req: Request): Promise<Response> {
     headers: {
       'Content-Type': upstream.headers.get('content-type') ?? 'text/event-stream',
       'Cache-Control': 'no-cache',
-      ...corsHeaders(),
+      ...corsHeaders(origin),
     },
   });
 }
 
-function corsHeaders(): Record<string, string> {
+// CORS travado: reflete origens do próprio app (qualquer *.vercel.app + localhost).
+// Em vez de '*', evita que outros sites usem o endpoint via browser.
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed =
+    origin && (/^https?:\/\/localhost(:\d+)?$/.test(origin) || /\.vercel\.app$/.test(new URL(origin).hostname))
+      ? origin
+      : 'https://concursobaependi.vercel.app';
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Vary': 'Origin',
   };
+}
+
+// Valida o token Supabase do usuário. Bloqueia chamadas anônimas (roubo de quota).
+// - sem Bearer → barra de cara (sem custo).
+// - com Bearer → confirma no Supabase (/auth/v1/user).
+// - se a infra de validação falhar (5xx/rede) → fail-open p/ não derrubar o produto.
+async function authenticate(req: Request): Promise<{ ok: boolean }> {
+  const authHeader = req.headers.get('authorization') ?? '';
+  const token = authHeader.toLowerCase().startsWith('bearer ')
+    ? authHeader.slice(7).trim()
+    : '';
+  if (!token) return { ok: false };
+
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const anonKey =
+    process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  // Sem config de validação no servidor: não dá pra verificar → fail-open
+  // (mas exigimos pelo menos um token presente acima).
+  if (!supabaseUrl || !anonKey) return { ok: true };
+
+  try {
+    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 200) return { ok: true };
+    if (res.status === 401 || res.status === 403) return { ok: false };
+    // Erro transitório da infra de auth → não bloqueia o usuário legítimo.
+    return { ok: true };
+  } catch {
+    return { ok: true };
+  }
 }

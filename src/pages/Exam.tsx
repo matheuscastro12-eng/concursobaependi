@@ -11,6 +11,7 @@ import ContextChat from '@/components/ContextChat';
 import logoColor from '@/assets/logo-concursos.svg';
 import { findSavedGeneratedExam, saveGeneratedExam, loadExamProgress, clearExamProgress } from '@/lib/savedGeneratedExams';
 import { tryPickFromBank, markQuestionsSeen } from '@/lib/questionBank';
+import { logAiCall } from '@/lib/aiLog';
 
 function hasParseableQuestion(text: string): boolean {
   const blocks = text.split(/(?=##\s*Questão\s+\d+)/i);
@@ -127,6 +128,15 @@ const Exam = () => {
     // 1) Tenta o BANCO DE QUESTÕES (instantâneo, sem IA).
     // Match exato de tema → matéria. Se houver questões suficientes,
     // monta o simulado direto do banco.
+    const logMeta = {
+      tema,
+      banca: config.banca,
+      cargo: config.cargo,
+      cargoSlug: searchParams.get('cargoSlug') ?? undefined,
+      nivel: config.nivel,
+      quantidade: config.quantidade,
+    };
+
     const fromBank = await tryPickFromBank(tema, config, concursoSlug);
     if (fromBank) {
       setShowSimulation(false);
@@ -134,6 +144,7 @@ const Exam = () => {
       loadSaved(fromBank.markdown, config);
       // Marca como vistas pra anti-repetição em sessões futuras.
       markQuestionsSeen(fromBank.questionIds);
+      void logAiCall({ feature: 'exam', source: 'bank', concursoSlug, meta: logMeta });
       toast({
         title: 'Simulado carregado do banco',
         description: 'Questões do banco oficial · sem custo de IA.',
@@ -147,6 +158,7 @@ const Exam = () => {
       setShowSimulation(false);
       setExamStarted(true);
       loadSaved(saved.resultado, config);
+      void logAiCall({ feature: 'exam', source: 'cache', concursoSlug, meta: logMeta });
       toast({
         title: 'Simulado carregado',
         description: 'Alguém já havia gerado essa configuração. Não usamos IA desta vez.',
@@ -160,6 +172,7 @@ const Exam = () => {
     const generated = await generate(conteudo, config, tema);
     if (generated?.trim()) {
       await saveGeneratedExam(tema, config, generated);
+      void logAiCall({ feature: 'exam', source: 'ia', concursoSlug, meta: logMeta });
       toast({
         title: 'Simulado salvo',
         description: 'A partir de agora, essa configuração pode ser reutilizada sem gerar de novo.',

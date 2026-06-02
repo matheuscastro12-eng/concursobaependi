@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { saveExamProgress, clearExamProgress } from '@/lib/savedGeneratedExams';
+import { supabase } from '@/integrations/supabase/client';
 
 export type DifficultyLevel = 'basico' | 'avancado';
 
@@ -178,9 +179,15 @@ export const useExamGenerator = () => {
       const thinkingBudget = config.nivel === 'avancado' ? 8192 : 4096;
 
       const url = useProxy ? GEMINI_PROXY : `${GEMINI_DIRECT}&key=${apiKey}`;
+      // Em produção (proxy), envia o token do usuário pro /api/gemini autenticar.
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (useProxy) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      }
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
