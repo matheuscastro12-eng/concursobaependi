@@ -4,10 +4,16 @@
 import type { Concurso } from './types';
 import { concurso as baependi } from './baependi';
 import { concurso as alagoa } from './alagoa';
+import { concurso as afya } from '../afya';
 
 export * from './types';
 
-export const CONCURSOS: Concurso[] = [baependi, alagoa];
+export const CONCURSOS: Concurso[] = [baependi, alagoa, afya];
+
+// Apenas concursos municipais (cargos + IA) — exclui produtos 'integradora'.
+export const CONCURSOS_MUNICIPAIS: Concurso[] = CONCURSOS.filter(
+  (c) => c.tipo !== 'integradora',
+);
 
 export const CONCURSOS_BY_SLUG: Record<string, Concurso> = CONCURSOS.reduce(
   (acc, c) => {

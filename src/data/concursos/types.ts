@@ -28,6 +28,41 @@ export interface Cargo {
   materiasIds: string[];
 }
 
+// ── Prova Integradora (Afya) ──
+// Conteúdo fixo (não gerado por IA): questões transcritas de devolutivas reais.
+export interface AlternativaIntegradora {
+  letra: string;        // 'A' | 'B' | 'C' | 'D'
+  texto: string;
+  correta: boolean;
+}
+
+export interface QuestaoIntegradora {
+  numero: number;
+  codigo: string | null;
+  enunciado: string;
+  alternativas: AlternativaIntegradora[];
+  gabarito: string | null;
+  respostaComentada: string;
+  referencia: string;
+  subareas: string[];
+  possivelImagem: boolean;
+}
+
+export interface ProvaIntegradora {
+  id: string;            // 'afya-2025-1'
+  titulo: string;        // 'Integradora 2025.1'
+  turmaSlug: string;     // 'turma-61'
+  modo: 'multipla' | 'revisao';  // multipla = MC A-D; revisao = só correta + justificativa
+  total: number;         // nº de questões
+  // Loader lazy do JSON com as questões (separa do bundle inicial).
+  load: () => Promise<QuestaoIntegradora[]>;
+}
+
+export interface Turma {
+  slug: string;          // 'turma-61'
+  nome: string;          // 'Turma 61'
+}
+
 export interface Concurso {
   slug: string;            // identificador URL: 'baependi' | 'alagoa'
   nome: string;            // "Prefeitura de Baependi"
@@ -44,11 +79,16 @@ export interface Concurso {
   // Cor primária pra UI/branding (opcional). Default = azul do app.
   themeColor?: string;
   // ── Pagamento ──
-  // 'stripe_mensal' = Stripe recorrente (Baependi). 'pix_unico' = PIX único vitalício (Alagoa).
+  // 'stripe_mensal' = Stripe recorrente (Baependi). 'pix_unico' = PIX único vitalício (Alagoa/Afya).
   paymentModel?: 'stripe_mensal' | 'pix_unico';
   precoLabel?: string;        // "R$ 40/mês" | "R$ 60 · pagamento único"
   formaPagamento?: string;    // "Stripe · cartão" | "PIX · pagamento único"
   valorCentavos?: number;     // 4000 | 6000
+  // ── Tipo de produto ──
+  // 'concurso' (default) = cargos + matérias + IA. 'integradora' = provas fixas Afya.
+  tipo?: 'concurso' | 'integradora';
+  turmas?: Turma[];
+  provas?: ProvaIntegradora[];
 }
 
 export const NIVEL_LABEL: Record<Nivel, string> = {

@@ -33,6 +33,17 @@ export const THEMES: Record<string, ConcursoTheme> = {
     borderHover: 'hover:border-emerald-500/40',
     shadowHover: 'hover:shadow-[0_12px_32px_-12px_rgba(16,185,129,0.20)]',
   },
+  // Afya — Prova Integradora: ciano/teal clínico.
+  afya: {
+    gradient: 'from-[#083344] via-[#0e7490] to-[#06b6d4]',
+    accent: 'amber-300',
+    primaryBg: 'bg-cyan-700',
+    primaryHover: 'hover:bg-cyan-800',
+    textHighlight: 'text-cyan-700',
+    iconColor: 'text-cyan-700',
+    borderHover: 'hover:border-cyan-500/40',
+    shadowHover: 'hover:shadow-[0_12px_32px_-12px_rgba(8,145,178,0.20)]',
+  },
 };
 
 export const getTheme = (slug: string): ConcursoTheme =>

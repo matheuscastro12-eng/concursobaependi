@@ -129,7 +129,7 @@ const CRM = () => {
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<'todos' | 'pending' | 'approved' | 'rejected'>('todos');
   const [accessFilter, setAccessFilter] = useState<'todos' | 'com-acesso' | 'sem-acesso'>('todos');
-  const [concursoFilter, setConcursoFilter] = useState<'todos' | 'baependi' | 'alagoa'>('todos');
+  const [concursoFilter, setConcursoFilter] = useState<'todos' | 'baependi' | 'alagoa' | 'afya'>('todos');
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
@@ -309,10 +309,11 @@ const CRM = () => {
 
   const updateAccessForConcurso = async (
     targetUserId: string,
-    concursoSlug: 'baependi' | 'alagoa',
+    concursoSlug: 'baependi' | 'alagoa' | 'afya',
     active: boolean,
   ) => {
     if (!user) return;
+    const slugLabel = concursoSlug === 'afya' ? 'Afya' : concursoSlug === 'alagoa' ? 'Alagoa' : 'Baependi';
     setBusyKey(`access:${targetUserId}:${concursoSlug}`);
 
     if (concursoSlug === 'baependi') {
@@ -332,12 +333,12 @@ const CRM = () => {
         return;
       }
     } else {
-      // Alagoa: grava um pix_payments "manual" confirmado/rejeitado e
-      // sincroniza has_lifetime_access.
+      // PIX (Alagoa/Afya): grava um pix_payments "manual" confirmado/rejeitado
+      // e sincroniza has_lifetime_access.
       if (active) {
         const upsertRes = await (supabase as any).from('pix_payments').insert({
           user_id: targetUserId,
-          concurso_slug: 'alagoa',
+          concurso_slug: concursoSlug,
           valor_centavos: 0,
           status: 'confirmed',
           comprovante_url: 'manual_grant',
@@ -346,7 +347,7 @@ const CRM = () => {
         });
         if (upsertRes.error) {
           setBusyKey(null);
-          toast({ title: 'Falha ao liberar Alagoa', description: upsertRes.error.message, variant: 'destructive' });
+          toast({ title: `Falha ao liberar ${slugLabel}`, description: upsertRes.error.message, variant: 'destructive' });
           return;
         }
         // Profile flag (retrocompat de useSubscription)
@@ -355,30 +356,30 @@ const CRM = () => {
           .update({ has_lifetime_access: true })
           .eq('id', targetUserId);
       } else {
-        // Revogar = marca todos os pix_payments confirmados de Alagoa como rejeitados
+        // Revogar = marca os pix_payments confirmados desse concurso como rejeitados
         const revokeRes = await (supabase as any)
           .from('pix_payments')
           .update({ status: 'rejected' })
           .eq('user_id', targetUserId)
-          .eq('concurso_slug', 'alagoa')
+          .eq('concurso_slug', concursoSlug)
           .eq('status', 'confirmed');
         if (revokeRes.error) {
           setBusyKey(null);
-          toast({ title: 'Falha ao revogar Alagoa', description: revokeRes.error.message, variant: 'destructive' });
+          toast({ title: `Falha ao revogar ${slugLabel}`, description: revokeRes.error.message, variant: 'destructive' });
           return;
         }
-        // Reset lifetime flag se o slug original do user era alagoa
+        // Reset lifetime flag se o slug original do user era esse concurso
         await (supabase as any)
           .from('profiles')
           .update({ has_lifetime_access: false })
           .eq('id', targetUserId)
-          .eq('concurso_slug', 'alagoa');
+          .eq('concurso_slug', concursoSlug);
       }
       setBusyKey(null);
     }
 
     toast({
-      title: active ? `Acesso liberado · ${concursoSlug === 'alagoa' ? 'Alagoa' : 'Baependi'}` : `Acesso revogado · ${concursoSlug === 'alagoa' ? 'Alagoa' : 'Baependi'}`,
+      title: active ? `Acesso liberado · ${slugLabel}` : `Acesso revogado · ${slugLabel}`,
       description: active ? 'O usuário já pode usar a área protegida desse concurso.' : 'O usuário perdeu o acesso liberado manualmente.',
     });
     load(false);
@@ -603,7 +604,7 @@ const CRM = () => {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="mb-3 inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
-            {(['todos', 'baependi', 'alagoa'] as const).map((slug) => (
+            {(['todos', 'baependi', 'alagoa', 'afya'] as const).map((slug) => (
               <button
                 key={slug}
                 onClick={() => setConcursoFilter(slug)}
@@ -611,7 +612,7 @@ const CRM = () => {
                   concursoFilter === slug ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                {slug === 'todos' ? 'Todos concursos' : slug === 'baependi' ? 'Baependi' : 'Alagoa'}
+                {slug === 'todos' ? 'Todos' : slug === 'baependi' ? 'Baependi' : slug === 'alagoa' ? 'Alagoa' : 'Afya'}
               </button>
             ))}
           </div>
@@ -762,11 +763,11 @@ const CRM = () => {
                       </p>
                     </div>
 
-                    {(['baependi', 'alagoa'] as const).map((slug) => {
-                      const slugLabel = slug === 'alagoa' ? 'Alagoa' : 'Baependi';
+                    {(['baependi', 'alagoa', 'afya'] as const).map((slug) => {
+                      const slugLabel = slug === 'afya' ? 'Afya' : slug === 'alagoa' ? 'Alagoa' : 'Baependi';
                       const hasThis = entry.accessSlugs.includes(slug);
                       const busy = busyKey === `access:${entry.userId}:${slug}`;
-                      const tone = slug === 'alagoa' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-blue-700 hover:bg-blue-800';
+                      const tone = slug === 'afya' ? 'bg-cyan-700 hover:bg-cyan-800' : slug === 'alagoa' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-blue-700 hover:bg-blue-800';
                       return (
                         <div key={slug} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
                           <div className="flex items-center justify-between">
@@ -859,7 +860,7 @@ function AiHistorySection({
 }: {
   summary: AiSummary | null;
   history: AiCallRow[];
-  concursoFilter: 'todos' | 'baependi' | 'alagoa';
+  concursoFilter: 'todos' | 'baependi' | 'alagoa' | 'afya';
   search: string;
 }) {
   const [view, setView] = useState<'timeline' | 'byUser'>('timeline');
@@ -1049,13 +1050,14 @@ function AiHistorySection({
 }
 
 export function ConcursoBadge({ slug, muted = false }: { slug: string; muted?: boolean }) {
-  const isAlagoa = slug === 'alagoa';
-  const label = isAlagoa ? 'Alagoa' : 'Baependi';
+  const label = slug === 'afya' ? 'Afya' : slug === 'alagoa' ? 'Alagoa' : 'Baependi';
   const tone = muted
     ? 'bg-slate-50 text-slate-500 border-slate-200 border-dashed'
-    : isAlagoa
-      ? 'bg-amber-50 text-amber-700 border-amber-200'
-      : 'bg-blue-50 text-blue-700 border-blue-200';
+    : slug === 'afya'
+      ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+      : slug === 'alagoa'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : 'bg-blue-50 text-blue-700 border-blue-200';
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${tone}`}>
       {muted ? `${label} (cadastro)` : label}

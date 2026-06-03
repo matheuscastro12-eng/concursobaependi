@@ -10,8 +10,11 @@ export default {
     'hover:shadow-[0_12px_32px_-12px_rgba(37,99,235,0.20)]',
     'bg-emerald-700', 'hover:bg-emerald-800', 'text-emerald-700', 'hover:text-emerald-700', 'hover:border-emerald-500/40',
     'hover:shadow-[0_12px_32px_-12px_rgba(16,185,129,0.20)]',
+    'bg-cyan-700', 'hover:bg-cyan-800', 'text-cyan-700', 'hover:text-cyan-700', 'hover:border-cyan-500/40',
+    'hover:shadow-[0_12px_32px_-12px_rgba(8,145,178,0.20)]',
     'from-[#0F172A]', 'via-[#1E3A8A]', 'to-[#2563EB]',
     'from-[#052e2b]', 'via-[#065f46]', 'to-[#10b981]',
+    'from-[#083344]', 'via-[#0e7490]', 'to-[#06b6d4]',
   ],
   prefix: "",
   theme: {

@@ -14,8 +14,11 @@ import { useToast } from '@/hooks/use-toast';
  * - Se array vazio → redireciona pra landing pública do concurso.
  * Admin (owner/CRM) passa direto.
  */
-const ConcursoAccessGuard = ({ children }: { children: ReactNode }) => {
-  const { concursoSlug } = useParams<{ concursoSlug: string }>();
+const ConcursoAccessGuard = ({ children, slug }: { children: ReactNode; slug?: string }) => {
+  const params = useParams<{ concursoSlug: string }>();
+  // `slug` explícito tem prioridade (rotas estáticas como /c/afya/prova/:provaId
+  // não têm o param :concursoSlug).
+  const concursoSlug = slug ?? params.concursoSlug;
   const { accessibleConcursoSlugs, loading } = useSubscription();
   const { canAccessAdmin, loading: adminLoading } = useAdmin();
   const { toast } = useToast();

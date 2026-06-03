@@ -17,7 +17,7 @@ import {
   Target,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { listConcursos, DEFAULT_CONCURSO_SLUG, getConcursoBySlug } from '@/data/concursos';
+import { CONCURSOS_MUNICIPAIS, DEFAULT_CONCURSO_SLUG, getConcursoBySlug } from '@/data/concursos';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -42,7 +42,8 @@ const Dashboard = () => {
 
   // Mostra TODOS os concursos: os pagos vão normais, os não-pagos ganham cadeado
   // e ao clicar disparam o fluxo de pagamento correspondente.
-  const concursos = listConcursos();
+  // Só concursos municipais (cargos + IA). Afya/integradora tem hub próprio (/c/afya).
+  const concursos = CONCURSOS_MUNICIPAIS;
 
   const hasAccessTo = (slug: string) => accessibleConcursoSlugs.includes(slug);
   const firstAccessible = accessibleConcursoSlugs[0] ?? DEFAULT_CONCURSO_SLUG;
@@ -134,8 +135,9 @@ const Dashboard = () => {
       navigate(`/auth?mode=criar&concurso=${slug}`);
       return;
     }
-    if (slug === 'alagoa') {
-      navigate('/c/alagoa/pagamento');
+    // Qualquer concurso PIX único → página de pagamento dedicada.
+    if (getConcursoBySlug(slug)?.paymentModel === 'pix_unico') {
+      navigate(`/c/${slug}/pagamento`);
       return;
     }
     // Baependi (default): Stripe.

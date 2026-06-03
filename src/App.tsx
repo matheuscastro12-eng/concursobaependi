@@ -25,6 +25,9 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const PaymentAlagoa = lazy(() => import("./pages/PaymentAlagoa"));
 const Desempenho = lazy(() => import("./pages/Desempenho"));
 const Revisao = lazy(() => import("./pages/Revisao"));
+const AfyaHome = lazy(() => import("./pages/AfyaHome"));
+const AfyaProva = lazy(() => import("./pages/AfyaProva"));
+const PaymentAfya = lazy(() => import("./pages/PaymentAfya"));
 
 const queryClient = new QueryClient();
 
@@ -59,6 +62,28 @@ const App = () => (
             <Routes>
               {/* Landing inicial: seletor de concurso */}
               <Route path="/" element={<ConcursosLanding />} />
+
+              {/* Afya — Prova Integradora (provas fixas). Rotas estáticas
+                  têm prioridade sobre /c/:concursoSlug no React Router v6. */}
+              <Route path="/c/afya" element={<AfyaHome />} />
+              <Route
+                path="/c/afya/pagamento"
+                element={
+                  <ProtectedRoute>
+                    <PaymentAfya />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/c/afya/prova/:provaId"
+                element={
+                  <AccessRoute>
+                    <ConcursoAccessGuard slug="afya">
+                      <AfyaProva />
+                    </ConcursoAccessGuard>
+                  </AccessRoute>
+                }
+              />
 
               {/* Por concurso */}
               <Route path="/c/:concursoSlug" element={<Home />} />
