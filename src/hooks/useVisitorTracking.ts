@@ -31,6 +31,23 @@ const ensureVisitorId = (): string => {
 
 const trimUserAgent = (ua: string): string => ua.slice(0, 240);
 
+// Trava anti-loop: nenhum humano gera muitos pageviews em poucos segundos.
+// Se passar do limite na janela, suprime o tracking (um redirect loop /↔/dashboard
+// já chegou a gerar ~23k pageviews antes desta trava existir).
+const RATE_WINDOW_MS = 5000;
+const RATE_MAX_IN_WINDOW = 8;
+const recentTracks: number[] = [];
+
+const allowTrack = (): boolean => {
+  const now = Date.now();
+  while (recentTracks.length && now - recentTracks[0] > RATE_WINDOW_MS) {
+    recentTracks.shift();
+  }
+  if (recentTracks.length >= RATE_MAX_IN_WINDOW) return false;
+  recentTracks.push(now);
+  return true;
+};
+
 /**
  * Loga 1 pageview pra cada navegação (rota client-side ou primeira carga).
  * Plug em alguma raiz que esteja DENTRO do <BrowserRouter>; ele se ativa
@@ -49,6 +66,8 @@ export const useVisitorTracking = () => {
     if (isExcludedPath(path)) return;
     // 2) Não conta pageviews de admins (você operando o app não é métrica).
     if (canAccessAdmin) return;
+    // 3) Trava anti-loop: suprime rajadas anormais (redirect loop etc).
+    if (!allowTrack()) return;
 
     const visitorId = ensureVisitorId();
 

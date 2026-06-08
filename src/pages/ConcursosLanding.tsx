@@ -22,8 +22,16 @@ const ConcursosLanding = () => {
     if (!user) return;
     const fromInternal = (location.state as { fromInternal?: boolean } | null)?.fromInternal;
     if (fromInternal) return;
-    navigate(canAccessAdmin ? '/crm' : '/dashboard', { replace: true });
-  }, [authLoading, canAccessAdmin, location.state, navigate, subscriptionLoading, user]);
+    // Só redireciona quem TEM destino. Logado sem acesso fica aqui na landing
+    // (vê os cards + CTA de pagamento). Antes mandava todo logado pra /dashboard,
+    // e o /dashboard rebatia o sem-acesso de volta pra '/' → loop infinito de
+    // redirect (gerou ~23k pageviews num navegador preso).
+    if (canAccessAdmin) {
+      navigate('/crm', { replace: true });
+    } else if (hasAccess) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authLoading, canAccessAdmin, hasAccess, location.state, navigate, subscriptionLoading, user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 cai-animated-grid">
