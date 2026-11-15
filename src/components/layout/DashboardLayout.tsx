@@ -407,7 +407,7 @@ const DashboardLayout = ({ children, mainClassName, hideFooter }: DashboardLayou
                 onChange={(e) => setPhoneInput(e.target.value)}
                 className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/20 transition-colors"
                 autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter' && phoneInput.trim()) handlePhoneSubmit(); }}
+                onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter' && phoneInput.trim()) handlePhoneSubmit(); }}
               />
             </div>
             <button
